@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#F6F4FF">
+  <title>Racha</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Barra de arriba: nombre, fecha y racha general -->
+    <header class="barra">
+      <div class="marca">
+        <span class="mascota mascota-chica" data-flama></span>
+        <div>
+          <h1>Racha</h1>
+          <p id="fecha-hoy"></p>
+        </div>
+      </div>
+      <div class="pastilla-racha" id="pastilla-racha" aria-label="Racha general">
+        <span class="mascota mascota-mini" data-flama></span>
+        <strong id="racha-general">0</strong>
+      </div>
+    </header>
+
+    <!-- Pantalla "Hoy" -->
+    <main id="vista-hoy" class="vista">
+      <section class="semana" id="semana" aria-label="Tu semana"></section>
+      <section class="tarjeta-progreso" id="progreso-hoy"></section>
+      <section id="lista-habitos" class="lista"></section>
+    </main>
+
+    <!-- Pantalla "Progreso" -->
+    <main id="vista-progreso" class="vista" hidden>
+      <section class="cifras" id="cifras"></section>
+      <section class="tarjeta" id="calendario"></section>
+      <section class="tarjeta" id="resumen-habitos"></section>
+    </main>
+
+    <!-- Menú de abajo -->
+    <nav class="menu">
+      <button class="menu-btn activo" data-vista="hoy" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/></svg>
+        <span>Hoy</span>
+      </button>
+      <button class="boton-mas" id="btn-nuevo" type="button" aria-label="Agregar hábito">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+      <button class="menu-btn" data-vista="progreso" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V10m7 10V4m7 16v-7"/></svg>
+        <span>Progreso</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- Hoja para crear o editar un hábito -->
+  <div class="fondo-hoja" id="fondo-hoja" hidden>
+    <form class="hoja" id="hoja" autocomplete="off">
+      <div class="hoja-agarre"></div>
+      <h2 id="hoja-titulo">Nuevo hábito</h2>
+
+      <label class="campo">
+        <span>¿Qué hábito quieres seguir?</span>
+        <input id="campo-nombre" type="text" maxlength="40" placeholder="Ej. Leer 10 minutos" enterkeyhint="done">
+        <small id="error-nombre" hidden>Ponle un nombre a tu hábito.</small>
+      </label>
+
+      <div class="campo">
+        <span>Ícono</span>
+        <div class="opciones-emoji" id="opciones-emoji"></div>
+      </div>
+
+      <div class="campo">
+        <span>Color</span>
+        <div class="opciones-color" id="opciones-color"></div>
+      </div>
+
+      <div class="campo">
+        <span>¿Qué días?</span>
+        <div class="opciones-dias" id="opciones-dias"></div>
+        <small id="error-dias" hidden>Elige al menos un día.</small>
+      </div>
+
+      <div class="campo">
+        <span>Recordatorio (opcional)</span>
+        <div class="fila-hora">
+          <input id="campo-hora" type="time" aria-label="Hora del recordatorio">
+          <button class="boton-chico" id="btn-quitar-hora" type="button">Quitar</button>
+        </div>
+        <small class="ayuda" id="ayuda-hora">Te avisamos a esa hora los días que toca.</small>
+      </div>
+
+      <button class="boton boton-principal" type="submit">Guardar</button>
+      <button class="boton boton-peligro" id="btn-eliminar" type="button" hidden>Eliminar hábito</button>
+      <button class="boton boton-plano" id="btn-cancelar" type="button">Cancelar</button>
+    </form>
+  </div>
+
+  <!-- Celebración al completar el día -->
+  <div class="celebra" id="celebra" hidden>
+    <div class="celebra-caja">
+      <span class="mascota mascota-grande" data-flama></span>
+      <h2>¡Día completo!</h2>
+      <p id="celebra-texto"></p>
+      <button class="boton boton-principal" id="btn-celebra" type="button">Continuar</button>
+    </div>
+  </div>
+
+  <!-- Aviso pequeño que aparece abajo unos segundos -->
+  <div class="aviso" id="aviso" hidden></div>
+
+  <script src="logic.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
