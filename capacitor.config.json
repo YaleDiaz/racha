@@ -1,0 +1,11 @@
+{
+  "appId": "com.yalediaz.racha",
+  "appName": "Racha",
+  "webDir": "www",
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_racha",
+      "iconColor": "#FF8A1F"
+    }
+  }
+}
