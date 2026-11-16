@@ -18,9 +18,31 @@
   --fuego: #FF8A1F;
   --fuego-sombra: #D96A05;
   --peligro: #E5484D;
+  --exito: #12B886;
+  --fuego-suave: #FFE3C4;
+  --logro-fondo: #FFF6E5;
+  --logro-borde: #FFD08A;
   --radio: 18px;
   --arriba: env(safe-area-inset-top, 0px);
   --abajo: env(safe-area-inset-bottom, 0px);
+}
+
+/* ====== Modo oscuro: solo cambian los colores ====== */
+[data-tema="oscuro"] {
+  color-scheme: dark;
+  --fondo: #15121F;
+  --superficie: #221C33;
+  --texto: #F2EFFA;
+  --texto-suave: #A69EBF;
+  --linea: #362E4D;
+  --primario: #8A72FF;
+  --primario-sombra: #5B43D6;
+  --fuego-sombra: #B85A00;
+  --peligro: #FF6B70;
+  --exito: #2DD4A0;
+  --fuego-suave: #5A3412;
+  --logro-fondo: #3A2A12;
+  --logro-borde: #8A5A12;
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -119,7 +141,7 @@ h1, h2, h3, p { margin: 0; }
 .habito-icono {
   flex: none; width: 50px; height: 50px; border-radius: 14px;
   display: grid; place-items: center; font-size: 26px;
-  background: color-mix(in srgb, var(--color) 16%, white);
+  background: color-mix(in srgb, var(--color) 18%, var(--superficie));
 }
 .habito-texto { min-width: 0; }
 .habito-nombre { display: block; font-size: 17px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -159,19 +181,22 @@ h1, h2, h3, p { margin: 0; }
 /* ====== Menú inferior ====== */
 .menu {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 6;
-  display: flex; align-items: center; justify-content: space-around;
+  display: flex; align-items: center; justify-content: space-around; gap: 2px;
   max-width: 520px; margin: 0 auto;
-  padding: 8px 18px calc(var(--abajo) + 8px);
+  padding: 8px 8px calc(var(--abajo) + 8px);
   background: var(--superficie); border-top: 2px solid var(--linea);
 }
-.menu-btn { width: 96px; padding: 6px 0; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 12px; font-weight: 800; color: var(--texto-suave); border-radius: 14px; }
+.menu-btn { flex: 1; min-width: 0; padding: 6px 0; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 12px; font-weight: 800; color: var(--texto-suave); border-radius: 14px; }
 .menu-btn svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 .menu-btn.activo { color: var(--primario); }
+.menu-btn.activo svg { stroke-width: 2.8; }
+/* Botón naranja flotante para agregar hábitos (solo en Hoy) */
 .boton-mas {
-  width: 64px; height: 64px; margin-top: -34px; border-radius: 22px;
+  position: fixed; z-index: 7;
+  right: max(18px, calc(50% - 242px)); bottom: calc(var(--abajo) + 86px);
+  width: 62px; height: 62px; border-radius: 22px;
   display: grid; place-items: center;
   background: var(--fuego); box-shadow: 0 5px 0 var(--fuego-sombra);
-  border: 4px solid var(--superficie);
   transition: transform .08s ease, box-shadow .08s ease;
 }
 .boton-mas svg { width: 30px; height: 30px; fill: none; stroke: #fff; stroke-width: 3.5; stroke-linecap: round; }
@@ -185,6 +210,9 @@ h1, h2, h3, p { margin: 0; }
 }
 .boton-principal { background: var(--primario); color: #fff; box-shadow: 0 5px 0 var(--primario-sombra); margin-bottom: 5px; }
 .boton-principal:active { transform: translateY(5px); box-shadow: none; }
+.boton-secundario { background: var(--superficie); color: var(--primario); border: 2px solid var(--linea); border-bottom-width: 4px; }
+.boton-secundario:active { transform: translateY(2px); border-bottom-width: 2px; }
+.boton:disabled { opacity: .6; }
 .boton-peligro { color: var(--peligro); border: 2px solid var(--linea); border-bottom-width: 4px; background: var(--superficie); }
 .boton-peligro.confirmar { background: var(--peligro); color: #fff; border-color: transparent; }
 .boton-plano { color: var(--texto-suave); }
@@ -211,7 +239,7 @@ h1, h2, h3, p { margin: 0; }
 .campo input:focus { border-color: var(--primario); }
 .opciones-emoji { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; }
 .opcion-emoji { aspect-ratio: 1; border-radius: 12px; font-size: 21px; background: var(--fondo); border: 2px solid transparent; }
-.opcion-emoji.elegido { border-color: var(--primario); background: #fff; }
+.opcion-emoji.elegido { border-color: var(--primario); background: var(--superficie); }
 .opciones-color { display: flex; gap: 10px; }
 .opcion-color { width: 40px; height: 40px; border-radius: 50%; background: var(--color); border: 4px solid var(--superficie); box-shadow: 0 0 0 2px var(--linea); }
 .opcion-color.elegido { box-shadow: 0 0 0 3px var(--texto); }
@@ -228,7 +256,7 @@ h1, h2, h3, p { margin: 0; }
 .aviso {
   position: fixed; left: 18px; right: 18px; bottom: calc(var(--abajo) + 100px); z-index: 40;
   max-width: 484px; margin: 0 auto; padding: 12px 16px; border-radius: 14px;
-  background: var(--texto); color: #fff; font-size: 14px; text-align: center;
+  background: var(--texto); color: var(--fondo); font-size: 14px; text-align: center;
   animation: subir .2s ease;
 }
 
@@ -252,7 +280,7 @@ h1, h2, h3, p { margin: 0; }
 .mes { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; text-align: center; }
 .mes .letra { font-size: 12px; color: var(--texto-suave); padding-bottom: 2px; }
 .mes .casilla { aspect-ratio: 1; border-radius: 10px; display: grid; place-items: center; font-size: 13px; font-weight: 800; color: var(--texto-suave); background: var(--fondo); }
-.mes .casilla.parcial { background: #FFE3C4; color: var(--fuego-sombra); }
+.mes .casilla.parcial { background: var(--fuego-suave); color: var(--fuego); }
 .mes .casilla.completo { background: var(--fuego); color: #fff; }
 .mes .casilla.hoy { box-shadow: 0 0 0 2px var(--primario); }
 .mes .casilla.futuro { background: transparent; opacity: .5; }
@@ -266,6 +294,138 @@ h1, h2, h3, p { margin: 0; }
 .fila-resumen .numero { text-align: right; font-size: 18px; font-weight: 900; color: var(--fuego-sombra); white-space: nowrap; }
 .fila-resumen .numero small { display: block; font-size: 11px; font-weight: 700; color: var(--texto-suave); }
 .nota { color: var(--texto-suave); font-size: 14px; margin-top: 8px; font-weight: 600; }
+
+/* ====== Entrenar ====== */
+.tarjeta-progreso.fuego { background: var(--fuego); box-shadow: 0 5px 0 var(--fuego-sombra); }
+.emoji-grande { flex: none; font-size: 44px; line-height: 1; }
+.boton-fuego { background: var(--fuego); color: #fff; box-shadow: 0 5px 0 var(--fuego-sombra); margin-bottom: 5px; }
+.boton-fuego:active { transform: translateY(5px); box-shadow: none; }
+.fila-entreno { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 2px solid var(--fondo); }
+.fila-entreno:first-of-type { border-top: 0; }
+.fila-entreno .habito-icono { width: 42px; height: 42px; font-size: 21px; border-radius: 12px; --color: var(--fuego); }
+.fila-entreno .datos { flex: 1; min-width: 0; }
+.fila-entreno .datos b { display: block; font-size: 15px; font-weight: 800; }
+.fila-entreno .datos span { font-size: 12px; color: var(--texto-suave); }
+.fila-entreno .datos span::first-letter { text-transform: uppercase; }
+.borrar { flex: none; min-width: 38px; height: 38px; padding: 0 10px; border-radius: 12px; background: var(--fondo); color: var(--texto-suave); font-size: 13px; font-weight: 800; }
+.borrar.confirmar { background: var(--peligro); color: #fff; }
+.opciones-deporte { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.opcion-deporte { padding: 8px 2px 6px; border-radius: 12px; background: var(--fondo); border: 2px solid transparent; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 11px; font-weight: 800; color: var(--texto-suave); }
+.opcion-deporte i { font-style: normal; font-size: 22px; }
+.opcion-deporte.elegido { border-color: var(--fuego); background: var(--superficie); color: var(--texto); }
+.opciones-minutos { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.opcion-minutos { padding: 10px 0; border-radius: 12px; font-size: 14px; font-weight: 900; background: var(--fondo); border: 2px solid var(--linea); border-bottom-width: 4px; color: var(--texto-suave); }
+.opcion-minutos.elegido { background: var(--fuego); border-color: var(--fuego-sombra); color: #fff; }
+
+/* ====== Perfil y logros ====== */
+.perfil-arriba { display: flex; align-items: center; gap: 14px; }
+.perfil-avatar { flex: none; width: 72px; height: 72px; border-radius: 24px; display: grid; place-items: center; font-size: 38px; background: var(--fondo); border: 2px solid var(--linea); border-bottom-width: 5px; }
+.perfil-nombre { flex: 1; min-width: 0; }
+.perfil-nombre input { width: 100%; padding: 8px 10px; border-radius: 12px; font-size: 20px; font-weight: 900; background: var(--fondo); border: 2px solid transparent; outline: none; user-select: text; -webkit-user-select: text; }
+.perfil-nombre input:focus { border-color: var(--primario); }
+.perfil-nombre span { display: block; font-size: 13px; color: var(--texto-suave); margin: 4px 0 0 10px; }
+.avatares { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; margin-top: 14px; }
+.avatares .opcion-emoji { font-size: 20px; }
+.nivel { margin-top: 16px; }
+.nivel-texto { display: flex; justify-content: space-between; font-size: 14px; font-weight: 900; }
+.nivel-texto span { color: var(--texto-suave); font-weight: 700; }
+.riel-nivel { height: 14px; border-radius: 999px; background: var(--fondo); margin-top: 6px; overflow: hidden; }
+.riel-nivel span { display: block; height: 100%; border-radius: 999px; background: var(--primario); }
+.logros-cabeza { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
+.logros-cabeza span { font-size: 13px; color: var(--texto-suave); }
+.logros { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.logro { padding: 12px 10px; border-radius: 16px; text-align: center; background: var(--fondo); border: 2px solid var(--linea); }
+.logro .medalla { font-size: 34px; line-height: 1.2; filter: grayscale(1); opacity: .35; }
+.logro b { display: block; font-size: 14px; font-weight: 900; margin-top: 4px; }
+.logro p { font-size: 12px; color: var(--texto-suave); font-weight: 600; margin-top: 2px; min-height: 30px; }
+.logro .riel-logro { height: 8px; border-radius: 999px; background: var(--linea); margin-top: 8px; overflow: hidden; }
+.logro .riel-logro span { display: block; height: 100%; background: var(--fuego); border-radius: 999px; }
+.logro small { display: block; font-size: 11px; color: var(--texto-suave); margin-top: 4px; }
+.logro.logrado { background: var(--logro-fondo); border-color: var(--logro-borde); border-bottom-width: 5px; }
+.logro.logrado .medalla { filter: none; opacity: 1; }
+.logro.logrado small { color: var(--fuego-sombra); font-weight: 900; }
+.celebra-emoji { font-size: 84px; line-height: 1.1; animation: bailar 1s ease-in-out infinite alternate; }
+
+/* ====== Piezas compartidas ====== */
+.centrada { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.centrada .boton { margin-top: 2px; }
+.columna { display: flex; flex-direction: column; gap: 16px; }
+.error-form { color: var(--peligro); font-size: 14px; font-weight: 700; margin: 0; }
+.boton-chico-principal { background: var(--primario); color: #fff; border-color: var(--primario-sombra); }
+.hoja form { display: flex; flex-direction: column; gap: 14px; }
+.hoja .nota { margin-top: 0; }
+
+/* ====== Pantalla de cuenta ====== */
+.pantalla-cuenta { position: fixed; inset: 0; z-index: 25; background: var(--fondo); overflow-y: auto; animation: aparecer .2s ease; }
+.cuenta-caja { position: relative; max-width: 440px; margin: 0 auto; padding: calc(var(--arriba) + 56px) 22px calc(var(--abajo) + 28px); }
+.cuenta-cerrar { position: absolute; top: calc(var(--arriba) + 12px); right: 16px; width: 42px; height: 42px; border-radius: 14px; background: var(--superficie); border: 2px solid var(--linea); color: var(--texto-suave); font-size: 16px; font-weight: 900; }
+.panel { display: flex; flex-direction: column; gap: 14px; }
+.panel h2 { font-size: 26px; font-weight: 900; line-height: 1.15; }
+.panel.centrada .nota { font-size: 15px; max-width: 320px; }
+.con-ojo { display: flex; gap: 8px; }
+.con-ojo input { flex: 1; min-width: 0; }
+.ojo { flex: none; padding: 0 14px; border-radius: 14px; font-size: 14px; font-weight: 800; color: var(--primario); background: var(--superficie); border: 2px solid var(--linea); }
+.emoji-grande { font-size: 56px; line-height: 1.1; }
+
+/* ====== Amigos ====== */
+.tarjeta-codigo { text-align: center; }
+.codigo-grande { font-size: 40px; font-weight: 900; letter-spacing: .18em; color: var(--primario); margin: 8px 0 2px; user-select: all; -webkit-user-select: all; }
+.fila-botones { display: flex; gap: 10px; margin-top: 12px; }
+.fila-botones .boton { flex: 1; padding: 12px; font-size: 14px; }
+#form-amigo h3 { margin-bottom: 10px; }
+#form-amigo .error-form { display: block; margin-top: 8px; }
+.campo-codigo { padding: 12px 14px; border-radius: 14px; font-size: 20px; font-weight: 900; letter-spacing: .2em; text-transform: uppercase; background: var(--fondo); border: 2px solid var(--linea); outline: none; user-select: text; -webkit-user-select: text; }
+.campo-codigo:focus { border-color: var(--primario); }
+.campo-codigo::placeholder { letter-spacing: normal; font-weight: 700; font-size: 16px; }
+.lista-amigos { display: flex; flex-direction: column; }
+.fila-amigo { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 4px; text-align: left; border-top: 2px solid var(--fondo); border-radius: 0; }
+.fila-amigo:first-child { border-top: 0; }
+.fila-amigo.yo { background: color-mix(in srgb, var(--primario) 10%, var(--superficie)); border-radius: 14px; border-top-color: transparent; padding: 10px 8px; }
+.fila-amigo.yo + .fila-amigo { border-top-color: transparent; }
+.posicion { flex: none; width: 30px; text-align: center; font-size: 20px; font-weight: 900; color: var(--texto-suave); }
+.avatar-amigo { position: relative; flex: none; width: 46px; height: 46px; border-radius: 15px; display: grid; place-items: center; font-size: 24px; background: var(--fondo); border: 2px solid var(--linea); }
+.punto-en-linea { position: absolute; right: -3px; bottom: -3px; width: 14px; height: 14px; border-radius: 50%; background: var(--exito); border: 3px solid var(--superficie); }
+.fila-amigo .datos { flex: 1; min-width: 0; }
+.fila-amigo .datos b { display: block; font-size: 15px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fila-amigo .datos span { display: block; font-size: 12px; color: var(--texto-suave); margin-top: 1px; }
+.fila-amigo .datos span.en-linea, .en-linea { color: var(--exito); font-weight: 800; }
+.puntos { flex: none; text-align: right; font-size: 15px; font-weight: 900; color: var(--primario); }
+.puntos small { display: block; font-size: 12px; font-weight: 800; color: var(--fuego); }
+.amigo-cabeza { display: flex; align-items: center; gap: 14px; }
+.amigo-cabeza .perfil-avatar { position: relative; }
+.amigo-cabeza h2 { font-size: 22px; font-weight: 900; }
+.amigo-cabeza span.nota, .amigo-cabeza span.en-linea { display: block; font-size: 14px; margin-top: 2px; }
+.hoja .cifras .cifra strong { font-size: 22px; }
+.comparacion { text-align: center; font-size: 15px; font-weight: 800; color: var(--primario); }
+
+/* ====== Perfil: configuración y cuenta ====== */
+.perfil-arriba { position: relative; }
+.btn-engrane { flex: none; align-self: flex-start; width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center; background: var(--fondo); color: var(--texto-suave); }
+.btn-engrane svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linejoin: round; }
+.linea-cuenta { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; padding: 10px 12px; border-radius: 14px; background: var(--fondo); font-size: 13px; color: var(--texto-suave); }
+.linea-cuenta .boton-chico { flex: none; padding: 8px 12px; }
+.cuenta-ok { color: var(--exito); font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ====== Configuración ====== */
+.ajustes-cabeza { display: flex; align-items: center; gap: 12px; }
+.ajustes-cabeza h2 { font-size: 24px; font-weight: 900; }
+.ajustes-cabeza .mes-flecha { background: var(--superficie); border: 2px solid var(--linea); font-size: 24px; line-height: 1; }
+.seccion-ajustes { display: flex; flex-direction: column; gap: 12px; }
+.seccion-ajustes h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--texto-suave); }
+.seccion-ajustes .nota { margin-top: 0; }
+.seccion-ajustes .boton { padding: 12px; font-size: 14px; }
+.fila-ajuste { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.fila-ajuste-texto { min-width: 0; }
+.fila-ajuste-texto b { display: block; font-size: 16px; font-weight: 800; }
+.fila-ajuste-texto span { display: block; font-size: 13px; color: var(--texto-suave); font-weight: 600; margin-top: 2px; overflow-wrap: anywhere; }
+.segmentado { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.segmentado button { padding: 10px 4px; border-radius: 14px; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 13px; font-weight: 800; color: var(--texto-suave); background: var(--fondo); border: 2px solid var(--linea); border-bottom-width: 4px; }
+.segmentado button i { font-style: normal; font-size: 22px; }
+.segmentado button.elegido { border-color: var(--primario); color: var(--primario); background: var(--superficie); }
+.interruptor { position: relative; flex: none; width: 54px; height: 32px; border-radius: 999px; background: var(--linea); transition: background .15s ease; }
+.interruptor::after { content: ""; position: absolute; top: 4px; left: 4px; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .15s ease; }
+.interruptor[aria-checked="true"] { background: var(--exito); }
+.interruptor[aria-checked="true"]::after { transform: translateX(22px); }
 
 /* ====== Celebración ====== */
 .celebra { position: fixed; inset: 0; z-index: 30; background: rgba(36, 28, 63, .6); display: grid; place-items: center; padding: 24px; animation: aparecer .2s ease; overflow: hidden; }

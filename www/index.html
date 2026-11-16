@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#F6F4FF">
   <title>Racha</title>
+  <link rel="icon" href="data:,">
+  <script src="tema.js"></script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -38,18 +40,74 @@
       <section class="tarjeta" id="resumen-habitos"></section>
     </main>
 
+    <!-- Pantalla "Entrenar" -->
+    <main id="vista-entrenar" class="vista" hidden>
+      <section class="tarjeta-progreso fuego" id="entrenar-resumen"></section>
+      <button class="boton boton-fuego" id="btn-entreno" type="button">Registrar entrenamiento</button>
+      <section class="tarjeta" id="entrenar-lista"></section>
+    </main>
+
+    <!-- Pantalla "Perfil" -->
+    <main id="vista-perfil" class="vista" hidden>
+      <section class="tarjeta" id="perfil-cabeza"></section>
+      <section class="tarjeta" id="perfil-logros"></section>
+    </main>
+
+    <!-- Menú de abajo -->
+    <!-- Pantalla "Amigos" (la llena cuenta.js) -->
+    <main id="vista-amigos" class="vista" hidden>
+      <section class="tarjeta centrada" id="amigos-sin-cuenta" hidden></section>
+      <div class="columna" id="amigos-con-cuenta" hidden>
+        <section class="tarjeta tarjeta-codigo">
+          <h3>Tu código de amigo</h3>
+          <div class="codigo-grande" id="mi-codigo">------</div>
+          <p class="nota">Compártelo con tus amigos. Cada amigo les da 25 puntos a los dos.</p>
+          <div class="fila-botones">
+            <button class="boton boton-secundario" id="btn-copiar" type="button">Copiar</button>
+            <button class="boton boton-fuego" id="btn-compartir" type="button">Compartir</button>
+          </div>
+        </section>
+        <form class="tarjeta" id="form-amigo" novalidate autocomplete="off">
+          <h3>Agregar amigo</h3>
+          <div class="fila-hora">
+            <input id="campo-codigo-amigo" class="campo-codigo" maxlength="6" placeholder="Código" autocapitalize="characters" spellcheck="false" aria-label="Código de tu amigo">
+            <button class="boton-chico boton-chico-principal" type="submit">Agregar</button>
+          </div>
+          <small class="error-form" id="error-amigo" hidden></small>
+        </form>
+        <section class="tarjeta" id="clasificacion"></section>
+      </div>
+    </main>
+
+    <!-- Pantalla "Configuración" (la llena ajustes.js) -->
+    <main id="vista-ajustes" class="vista" hidden></main>
+
+    <!-- Botón para agregar hábito (solo en Hoy) -->
+    <button class="boton-mas" id="btn-nuevo" type="button" aria-label="Agregar hábito">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
+
     <!-- Menú de abajo -->
     <nav class="menu">
       <button class="menu-btn activo" data-vista="hoy" type="button">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/></svg>
         <span>Hoy</span>
       </button>
-      <button class="boton-mas" id="btn-nuevo" type="button" aria-label="Agregar hábito">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-      </button>
       <button class="menu-btn" data-vista="progreso" type="button">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V10m7 10V4m7 16v-7"/></svg>
         <span>Progreso</span>
+      </button>
+      <button class="menu-btn" data-vista="entrenar" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/></svg>
+        <span>Entrenar</span>
+      </button>
+      <button class="menu-btn" data-vista="amigos" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20c.8-3.6 3.4-5 6.5-5s5.7 1.4 6.5 5M16 4.3a3.5 3.5 0 0 1 0 6.4M18.5 15c1.6.6 2.6 2.1 3 5"/></svg>
+        <span>Amigos</span>
+      </button>
+      <button class="menu-btn" data-vista="perfil" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4.5 20.5c1-4 4-5.5 7.5-5.5s6.5 1.5 7.5 5.5"/></svg>
+        <span>Perfil</span>
       </button>
     </nav>
   </div>
@@ -97,13 +155,111 @@
     </form>
   </div>
 
-  <!-- Celebración al completar el día -->
+  <!-- Hoja para registrar un entrenamiento -->
+  <div class="fondo-hoja" id="fondo-entreno" hidden>
+    <form class="hoja" id="hoja-entreno" autocomplete="off" novalidate>
+      <div class="hoja-agarre"></div>
+      <h2>Registrar entrenamiento</h2>
+
+      <div class="campo">
+        <span>¿Qué hiciste?</span>
+        <div class="opciones-deporte" id="opciones-deporte"></div>
+      </div>
+
+      <div class="campo">
+        <span>¿Cuánto tiempo?</span>
+        <div class="opciones-minutos" id="opciones-minutos"></div>
+        <input id="campo-minutos" type="number" inputmode="numeric" min="1" max="600" placeholder="Otra duración (minutos)">
+        <small id="error-minutos" hidden>Pon cuántos minutos entrenaste (de 1 a 600).</small>
+      </div>
+
+      <button class="boton boton-principal" type="submit">Guardar</button>
+      <button class="boton boton-plano" id="btn-cancelar-entreno" type="button">Cancelar</button>
+    </form>
+  </div>
+
+  <!-- Celebración (día completo o logro nuevo) -->
   <div class="celebra" id="celebra" hidden>
     <div class="celebra-caja">
-      <span class="mascota mascota-grande" data-flama></span>
-      <h2>¡Día completo!</h2>
+      <span class="mascota mascota-grande" data-flama id="celebra-mascota"></span>
+      <span class="celebra-emoji" id="celebra-emoji" hidden></span>
+      <h2 id="celebra-titulo">¡Día completo!</h2>
       <p id="celebra-texto"></p>
       <button class="boton boton-principal" id="btn-celebra" type="button">Continuar</button>
+    </div>
+  </div>
+
+  <!-- Hoja que se llena según se necesite (detalle de amigo, cambiar contraseña, confirmaciones) -->
+  <div class="fondo-hoja" id="fondo-generico" hidden>
+    <div class="hoja" id="hoja-generica"></div>
+  </div>
+
+  <!-- Pantalla de cuenta: bienvenida, crear cuenta, entrar, recuperar contraseña -->
+  <div class="pantalla-cuenta" id="pantalla-cuenta" hidden>
+    <div class="cuenta-caja">
+      <button class="cuenta-cerrar" id="cuenta-cerrar" type="button" aria-label="Cerrar">✕</button>
+
+      <section class="panel centrada" data-panel="bienvenida">
+        <span class="mascota mascota-grande" data-flama></span>
+        <h2>¡Bienvenido a Racha!</h2>
+        <p class="nota">Crea tu cuenta para respaldar tu progreso, competir con tus amigos y ganar 25 puntos por cada uno.</p>
+        <button class="boton boton-principal" type="button" data-ir="crear">Crear cuenta</button>
+        <button class="boton boton-secundario" type="button" data-ir="entrar">Ya tengo cuenta</button>
+        <button class="boton boton-plano" type="button" id="btn-sin-cuenta">Continuar sin cuenta</button>
+      </section>
+
+      <form class="panel" data-panel="crear" id="form-crear" novalidate>
+        <h2>Crea tu cuenta</h2>
+        <label class="campo"><span>Tu nombre</span><input name="nombre" maxlength="24" autocomplete="nickname"></label>
+        <label class="campo"><span>Correo</span><input name="correo" type="email" inputmode="email" autocomplete="email" autocapitalize="none"></label>
+        <label class="campo"><span>Contraseña (mínimo 8)</span>
+          <span class="con-ojo"><input name="clave" type="password" autocomplete="new-password"><button class="ojo" type="button">Ver</button></span>
+        </label>
+        <p class="error-form" hidden></p>
+        <button class="boton boton-principal" type="submit">Crear cuenta</button>
+        <button class="boton boton-plano" type="button" data-ir="entrar">Ya tengo cuenta</button>
+      </form>
+
+      <form class="panel" data-panel="entrar" id="form-entrar" novalidate>
+        <h2>Inicia sesión</h2>
+        <label class="campo"><span>Correo</span><input name="correo" type="email" inputmode="email" autocomplete="email" autocapitalize="none"></label>
+        <label class="campo"><span>Contraseña</span>
+          <span class="con-ojo"><input name="clave" type="password" autocomplete="current-password"><button class="ojo" type="button">Ver</button></span>
+        </label>
+        <p class="error-form" hidden></p>
+        <button class="boton boton-principal" type="submit">Entrar</button>
+        <button class="boton boton-plano" type="button" data-ir="recuperar">¿Olvidaste tu contraseña?</button>
+        <button class="boton boton-plano" type="button" data-ir="crear">Crear cuenta nueva</button>
+      </form>
+
+      <form class="panel" data-panel="recuperar" id="form-recuperar" novalidate>
+        <h2>Recupera tu contraseña</h2>
+        <p class="nota">Te enviaremos un código de 6 números a tu correo.</p>
+        <label class="campo"><span>Correo de tu cuenta</span><input name="correo" type="email" inputmode="email" autocomplete="email" autocapitalize="none"></label>
+        <p class="error-form" hidden></p>
+        <button class="boton boton-principal" type="submit">Enviar código</button>
+        <button class="boton boton-plano" type="button" data-ir="entrar">Volver</button>
+      </form>
+
+      <form class="panel" data-panel="codigo" id="form-codigo" novalidate>
+        <h2>Escribe el código</h2>
+        <p class="nota" id="codigo-texto"></p>
+        <label class="campo"><span>Código de 6 números</span><input name="codigo" inputmode="numeric" maxlength="6" autocomplete="one-time-code"></label>
+        <label class="campo"><span>Nueva contraseña (mínimo 8)</span>
+          <span class="con-ojo"><input name="clave" type="password" autocomplete="new-password"><button class="ojo" type="button">Ver</button></span>
+        </label>
+        <p class="error-form" hidden></p>
+        <button class="boton boton-principal" type="submit">Cambiar contraseña</button>
+        <button class="boton boton-plano" type="button" data-ir="recuperar">Pedir otro código</button>
+      </form>
+
+      <section class="panel centrada" data-panel="elegir">
+        <span class="emoji-grande">☁️📱</span>
+        <h2>Tienes datos en dos lugares</h2>
+        <p class="nota">Tu cuenta ya tiene un respaldo y este teléfono también tiene hábitos guardados. ¿Cuáles quieres usar? Los otros se reemplazan.</p>
+        <button class="boton boton-principal" type="button" id="elegir-cuenta">Usar los de mi cuenta</button>
+        <button class="boton boton-secundario" type="button" id="elegir-telefono">Usar los de este teléfono</button>
+      </section>
     </div>
   </div>
 
@@ -111,6 +267,10 @@
   <div class="aviso" id="aviso" hidden></div>
 
   <script src="logic.js"></script>
+  <script src="config.js"></script>
+  <script src="api.js"></script>
   <script src="app.js"></script>
+  <script src="cuenta.js"></script>
+  <script src="ajustes.js"></script>
 </body>
 </html>

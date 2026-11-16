@@ -66,4 +66,41 @@ assert.strictEqual(L.rachaGeneral([g1, g2], d('2026-11-18')), 0); // un día com
 assert.strictEqual(L.rachaGeneral([], d('2026-11-16')), 0);
 assert.strictEqual(L.totalHechos([g1, g2]), 3);
 
+// ---------- Logros, experiencia y nivel ----------
+const e = (deporte, minutos) => ({ id: 'e', deporte, minutos, fecha: '2026-11-16' });
+const logro = (lista, id) => lista.find((l) => l.id === id);
+
+// Días perfectos: a y c tocan diario; solo cuenta cuando ambos se hicieron
+const p1 = habito('2026-11-14', TODOS, ['2026-11-14', '2026-11-15', '2026-11-16']);
+const p2 = habito('2026-11-14', TODOS, ['2026-11-14', '2026-11-16']);
+assert.strictEqual(L.diasPerfectos([p1, p2], d('2026-11-16')), 2);
+assert.strictEqual(L.diasPerfectos([], d('2026-11-16')), 0);
+
+// Experiencia y nivel
+assert.strictEqual(L.experiencia([p1, p2], [e('gym', 60)]), 5 * 10 + 25);
+assert.strictEqual(L.experiencia([p1, p2], [e('gym', 60)], 3), 5 * 10 + 25 + 3 * 25); // 25 por amigo
+assert.deepStrictEqual(L.nivel(0), { nivel: 1, avance: 0, meta: 100 });
+assert.deepStrictEqual(L.nivel(275), { nivel: 3, avance: 75, meta: 100 });
+
+// Logros
+let ls = L.logros([], [], d('2026-11-16'));
+assert.strictEqual(ls.length, 18);
+assert.ok(ls.every((l) => !l.logrado && l.valor === 0));
+
+ls = L.logros([p1, p2], [e('gym', 200), e('correr', 60), e('futbol', 40)], d('2026-11-16'));
+assert.ok(logro(ls, 'racha3').logrado);          // p1 lleva 3 seguidos
+assert.ok(!logro(ls, 'racha7').logrado);
+assert.strictEqual(logro(ls, 'racha7').valor, 3);
+assert.ok(logro(ls, 'perfecto1').logrado);
+assert.ok(logro(ls, 'gym1').logrado);
+assert.ok(!logro(ls, 'gym10').logrado);
+assert.ok(logro(ls, 'multi3').logrado);          // 3 deportes distintos
+assert.ok(logro(ls, 'min300').logrado);          // 300 minutos exactos
+assert.strictEqual(logro(ls, 'hechos10').valor, 5);
+assert.strictEqual(logro(ls, 'min300').valor, 300); // el valor nunca pasa de la meta
+assert.ok(!logro(ls, 'amigo1').logrado);
+ls = L.logros([], [], d('2026-11-16'), 2);
+assert.ok(logro(ls, 'amigo1').logrado);
+assert.strictEqual(logro(ls, 'amigo5').valor, 2);
+
 console.log('✔ Todas las pruebas de rachas pasaron');
