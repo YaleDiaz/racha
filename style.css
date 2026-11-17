@@ -22,6 +22,10 @@
   --fuego-suave: #FFE3C4;
   --logro-fondo: #FFF6E5;
   --logro-borde: #FFD08A;
+  --hielo: #1C9CF6;
+  --hielo-sombra: #0F7BC8;
+  --hielo-suave: #DDF1FF;
+  --oro: #F5B400;
   --radio: 18px;
   --arriba: env(safe-area-inset-top, 0px);
   --abajo: env(safe-area-inset-bottom, 0px);
@@ -43,6 +47,7 @@
   --fuego-suave: #5A3412;
   --logro-fondo: #3A2A12;
   --logro-borde: #8A5A12;
+  --hielo-suave: #12324A;
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -57,6 +62,7 @@ body {
   -webkit-user-select: none;
 }
 button, input { font: inherit; color: inherit; }
+input:disabled { opacity: .75; }
 button { cursor: pointer; border: 0; background: none; padding: 0; }
 h1, h2, h3, p { margin: 0; }
 [hidden] { display: none !important; }
@@ -258,6 +264,7 @@ h1, h2, h3, p { margin: 0; }
   max-width: 484px; margin: 0 auto; padding: 12px 16px; border-radius: 14px;
   background: var(--texto); color: var(--fondo); font-size: 14px; text-align: center;
   animation: subir .2s ease;
+  pointer-events: none; /* no estorba para tocar lo de abajo */
 }
 
 @keyframes aparecer { from { opacity: 0; } }
@@ -437,6 +444,216 @@ h1, h2, h3, p { margin: 0; }
 @keyframes brotar { from { transform: scale(.7); opacity: 0; } }
 @keyframes bailar { from { transform: rotate(-5deg); } to { transform: rotate(5deg) translateY(-4px); } }
 @keyframes caer { to { transform: translateY(110vh) rotate(720deg); } }
+
+/* ======================================================================
+   VERSIÓN 4: escudos, meta diaria, retos, fotos, novedades, liga, gym y reloj
+   ====================================================================== */
+
+/* Escudos en la barra de arriba */
+.pastillas { display: flex; align-items: center; gap: 8px; }
+.pastilla-escudo {
+  display: flex; align-items: center; gap: 4px;
+  padding: 6px 12px 6px 9px; border-radius: 999px;
+  background: var(--superficie); border: 2px solid var(--linea); border-bottom-width: 4px;
+  font-size: 18px; font-weight: 900; color: var(--hielo-sombra);
+}
+.pastilla-escudo span { font-size: 17px; line-height: 1; }
+.pastilla-escudo.apagada { color: var(--texto-suave); }
+.pastilla-escudo.apagada span { filter: grayscale(1); opacity: .5; }
+.dia.congelado .dia-circulo { background: var(--hielo-suave); border-color: var(--hielo); font-size: 17px; }
+.mes .casilla.congelado { background: var(--hielo-suave); color: var(--hielo-sombra); }
+
+/* Meta diaria */
+.tarjeta-meta {
+  display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+  padding: 12px 14px; border-radius: var(--radio);
+  background: var(--superficie); border: 2px solid var(--linea); border-bottom-width: 5px;
+  margin-top: -4px;
+}
+.tarjeta-meta:active { transform: translateY(2px); border-bottom-width: 3px; }
+.meta-rayo { flex: none; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-size: 22px; background: color-mix(in srgb, var(--oro) 22%, var(--superficie)); }
+.meta-contenido { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.meta-fila { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 15px; }
+.meta-fila b { font-weight: 900; }
+.meta-fila span { font-size: 13px; color: var(--texto-suave); white-space: nowrap; }
+.riel-meta { display: block; height: 12px; border-radius: 999px; background: var(--fondo); overflow: hidden; }
+.riel-meta span { display: block; height: 100%; border-radius: 999px; background: var(--oro); transition: width .35s ease; }
+.tarjeta-meta.cumplida { border-color: color-mix(in srgb, var(--exito) 45%, var(--linea)); }
+.tarjeta-meta.cumplida .riel-meta span { background: var(--exito); }
+.opciones-meta { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.opcion-meta { padding: 12px 4px; border-radius: 14px; display: flex; flex-direction: column; align-items: center; gap: 2px; background: var(--fondo); border: 2px solid var(--linea); border-bottom-width: 4px; }
+.opcion-meta b { font-size: 22px; font-weight: 900; }
+.opcion-meta span { font-size: 12px; color: var(--texto-suave); }
+.opcion-meta.elegido { background: var(--oro); border-color: color-mix(in srgb, var(--oro) 70%, black); color: #241C3F; }
+.opcion-meta.elegido span { color: #241C3F; }
+
+/* Reto sorpresa */
+.tarjeta-reto {
+  display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: var(--radio);
+  background: linear-gradient(135deg, #FF8A1F, #F0438F); color: #fff;
+  box-shadow: 0 5px 0 #C2317A;
+  animation: brotar .4s cubic-bezier(.2, 1.4, .4, 1);
+}
+.tarjeta-reto.hecho { background: var(--superficie); color: var(--texto); border: 2px solid var(--linea); border-bottom-width: 5px; box-shadow: none; animation: none; }
+.reto-arriba { display: flex; justify-content: space-between; align-items: center; }
+.reto-etiqueta { font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; }
+.tarjeta-reto.hecho .reto-etiqueta { color: var(--exito); }
+.reto-puntos { padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,.25); font-size: 14px; font-weight: 900; }
+.tarjeta-reto.hecho .reto-puntos { background: var(--fondo); color: var(--texto-suave); }
+.reto-medio { display: flex; align-items: center; gap: 12px; }
+.reto-emoji { flex: none; font-size: 42px; line-height: 1; }
+.reto-texto b { display: block; font-size: 19px; font-weight: 900; line-height: 1.2; }
+.reto-texto span { display: block; font-size: 13px; opacity: .9; margin-top: 3px; }
+.tarjeta-reto.hecho .reto-texto span { color: var(--texto-suave); }
+.boton-blanco { display: flex; align-items: center; justify-content: center; gap: 8px; background: #fff; color: #C2317A; box-shadow: 0 5px 0 rgba(0,0,0,.18); margin-bottom: 5px; }
+.boton-blanco svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linejoin: round; }
+.boton-blanco:active { transform: translateY(5px); box-shadow: none; }
+
+/* Botón de foto en la tarjeta del hábito */
+.boton-foto {
+  position: relative; flex: none; width: 46px; height: 46px; border-radius: 14px;
+  display: grid; place-items: center;
+  background: color-mix(in srgb, var(--color) 14%, var(--superficie)); border: 2px dashed color-mix(in srgb, var(--color) 60%, var(--linea));
+  color: color-mix(in srgb, var(--color) 80%, var(--texto));
+}
+.boton-foto svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.1; stroke-linejoin: round; }
+.boton-foto small { position: absolute; top: -8px; right: -8px; padding: 1px 5px; border-radius: 999px; background: var(--oro); color: #241C3F; font-size: 10px; font-weight: 900; }
+.boton-foto:disabled { opacity: .5; }
+.habito.hecho .habito-nombre { max-width: 100%; }
+.opciones-pasos { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+
+/* Vitrina del perfil */
+.vitrina { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; }
+.vitrina-item { padding: 10px 4px; border-radius: 14px; background: var(--fondo); text-align: center; display: flex; flex-direction: column; align-items: center; }
+.vitrina-item span { font-size: 22px; line-height: 1.1; }
+.vitrina-item b { font-size: 20px; font-weight: 900; line-height: 1.2; }
+.vitrina-item small { font-size: 11px; color: var(--texto-suave); }
+
+/* Gráficas */
+.grafica { margin-top: 10px; }
+.grafica-svg { width: 100%; height: auto; display: block; overflow: visible; }
+.grafica-linea { fill: none; stroke: var(--primario); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.grafica-punto { fill: var(--superficie); stroke: var(--primario); stroke-width: 2.5; }
+.grafica-max, .grafica-eje { fill: var(--texto-suave); font-size: 11px; font-weight: 700; font-family: inherit; }
+
+/* Pestañas de Amigos (Novedades · Liga · Amigos) */
+.pestanas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 4px; border-radius: 16px; background: var(--superficie); border: 2px solid var(--linea); }
+.pestanas button { position: relative; padding: 9px 4px; border-radius: 12px; font-size: 14px; font-weight: 900; color: var(--texto-suave); }
+.pestanas button.elegido { background: var(--primario); color: #fff; box-shadow: 0 3px 0 var(--primario-sombra); }
+.punto-nuevo { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--peligro); margin-left: 5px; vertical-align: 2px; }
+.menu-btn { position: relative; }
+.punto-menu { position: absolute; top: 3px; left: calc(50% + 8px); margin: 0; border: 2px solid var(--superficie); width: 12px; height: 12px; }
+
+/* Avisos de amigos (arriba) */
+.banner {
+  position: fixed; left: 14px; right: 14px; top: calc(var(--arriba) + 10px); z-index: 45;
+  max-width: 492px; margin: 0 auto; padding: 10px 14px; border-radius: 18px;
+  display: flex; align-items: center; gap: 10px; text-align: left;
+  background: var(--superficie); border: 2px solid var(--linea); border-bottom-width: 5px;
+  box-shadow: 0 10px 30px rgba(36, 28, 63, .18); font-size: 15px; font-weight: 800;
+}
+.banner.entra { animation: bajar .3s cubic-bezier(.2, 1.3, .4, 1); }
+.banner-avatar { flex: none; width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center; font-size: 22px; background: var(--fondo); }
+.banner-texto { min-width: 0; line-height: 1.3; }
+@keyframes bajar { from { transform: translateY(-30px); opacity: 0; } }
+
+/* Novedades */
+.publicacion { padding: 12px; border-radius: var(--radio); background: var(--superficie); border: 2px solid var(--linea); border-bottom-width: 5px; display: flex; flex-direction: column; gap: 10px; }
+.pub-arriba { display: flex; align-items: flex-start; gap: 10px; }
+.pub-arriba .avatar-amigo { width: 42px; height: 42px; font-size: 22px; border-radius: 14px; }
+.pub-texto { flex: 1; min-width: 0; }
+.pub-texto p { font-size: 15px; font-weight: 700; line-height: 1.3; overflow-wrap: anywhere; }
+.pub-texto p b { font-weight: 900; }
+.pub-hora { display: block; font-size: 12px; color: var(--texto-suave); margin-top: 3px; font-weight: 700; }
+.pub-puntos { flex: none; padding: 3px 9px; border-radius: 999px; background: color-mix(in srgb, var(--oro) 25%, var(--superficie)); color: var(--fuego-sombra); font-size: 13px; font-weight: 900; }
+.pub-foto { display: block; width: 100%; aspect-ratio: 4 / 5; max-height: 460px; border-radius: 14px; overflow: hidden; background: var(--fondo); }
+.pub-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pub-foto-cargando { display: grid; place-items: center; height: 100%; font-size: 14px; color: var(--texto-suave); }
+.pub-foto:not(.lista) .pub-foto-cargando { font-size: 30px; animation: latir 1.2s ease-in-out infinite; }
+.pub-borrar { align-self: flex-end; padding: 4px 10px; border-radius: 10px; font-size: 12px; font-weight: 800; color: var(--texto-suave); background: var(--fondo); }
+.pub-borrar.confirmar { background: var(--peligro); color: #fff; }
+.tipo-reto { border-color: color-mix(in srgb, #F0438F 45%, var(--linea)); }
+.tipo-record, .tipo-medalla { border-color: var(--logro-borde); background: var(--logro-fondo); }
+.nota-cola { margin: 0; text-align: center; }
+.visor { position: fixed; inset: 0; z-index: 50; background: rgba(0, 0, 0, .92); display: grid; place-items: center; padding: 16px; animation: aparecer .15s ease; }
+.visor img { max-width: 100%; max-height: 100%; border-radius: 12px; }
+@keyframes latir { 50% { transform: scale(1.15); opacity: .6; } }
+
+/* Liga */
+.liga-cabeza { background: linear-gradient(135deg, #F5B400, #FF8A1F); box-shadow: 0 5px 0 #C97A00; color: #241C3F; }
+.liga-cabeza p { opacity: .9; }
+
+/* Entrenar */
+.tarjeta-activo, .tarjeta-reloj { display: flex; align-items: center; gap: 12px; }
+.tarjeta-activo { border-color: var(--fuego); }
+.tarjeta-activo .emoji-grande, .tarjeta-reloj .emoji-grande { font-size: 34px; }
+.tarjeta-activo .datos, .tarjeta-reloj .datos { flex: 1; min-width: 0; }
+.tarjeta-activo .datos b, .tarjeta-reloj .datos b { display: block; font-size: 16px; font-weight: 900; }
+.tarjeta-activo .datos span, .tarjeta-reloj .datos span { display: block; font-size: 13px; color: var(--texto-suave); }
+.tarjeta-activo .boton-chico, .tarjeta-reloj .boton-chico { padding: 10px 14px; }
+.fila-rutina-info { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; text-align: left; }
+.fila-rutina .boton-chico { padding: 10px 14px; }
+.boton-chico-fuego { background: var(--fuego); color: #fff; border-color: var(--fuego-sombra); }
+.sugerencias-izq { justify-content: flex-start; margin-top: 4px; }
+.sugerencia-chica { padding: 7px 11px; font-size: 13px; }
+.selector-ejercicio { display: flex; flex-direction: column; gap: 8px; }
+.campo-texto, .gym-input, .num-chico {
+  padding: 11px 12px; border-radius: 12px; font-size: 16px; font-weight: 800; min-width: 0;
+  background: var(--fondo); border: 2px solid var(--linea); outline: none; user-select: text; -webkit-user-select: text;
+}
+.campo-texto:focus, .gym-input:focus, .num-chico:focus { border-color: var(--primario); }
+.lista-ejercicios { display: flex; flex-direction: column; gap: 8px; }
+.fila-ejercicio-ed { display: flex; align-items: center; gap: 6px; }
+.fila-ejercicio-ed b { flex: 1; min-width: 0; font-size: 15px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.num-chico { width: 54px; padding: 8px 4px; text-align: center; }
+.por { color: var(--texto-suave); font-weight: 900; }
+.peso-grande { display: flex; flex-direction: column; margin-top: 4px; }
+.peso-grande b { font-size: 34px; font-weight: 900; line-height: 1.1; }
+.peso-grande span { font-size: 13px; color: var(--texto-suave); }
+.fila-record { width: 100%; text-align: left; }
+.fila-record .habito-icono { --color: var(--oro); }
+.marca { flex: none; font-size: 15px; font-weight: 900; color: var(--primario); white-space: nowrap; }
+.centrada-texto { text-align: center; }
+
+/* Pantalla de entrenamiento en curso */
+.pantalla-gym { position: fixed; inset: 0; z-index: 22; background: var(--fondo); overflow-y: auto; animation: aparecer .2s ease; }
+.gym-caja { max-width: 520px; margin: 0 auto; padding: calc(var(--arriba) + 12px) 16px calc(var(--abajo) + 110px); display: flex; flex-direction: column; gap: 14px; }
+.gym-cabeza { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 10px; padding: 8px 0; background: var(--fondo); }
+.gym-cabeza .mes-flecha { background: var(--superficie); border: 2px solid var(--linea); font-size: 24px; line-height: 1; }
+.gym-cabeza .boton-chico { padding: 10px 14px; }
+.gym-titulo { flex: 1; min-width: 0; }
+.gym-titulo h2 { font-size: 20px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gym-reloj { font-size: 14px; font-weight: 900; color: var(--fuego-sombra); font-variant-numeric: tabular-nums; }
+.gym-ejercicio .logros-cabeza { margin-bottom: 4px; }
+.gym-previo { margin-top: 0; font-size: 13px; }
+.gym-tabla { display: grid; grid-template-columns: 40px 1fr 1fr 48px; gap: 8px; align-items: center; margin: 12px 0 10px; }
+.gym-th { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--texto-suave); text-align: center; }
+.gym-num { text-align: center; font-size: 16px; font-weight: 900; color: var(--texto-suave); }
+.gym-input { width: 100%; text-align: center; font-size: 18px; }
+.gym-input::placeholder { color: color-mix(in srgb, var(--texto-suave) 70%, transparent); }
+.gym-check { width: 48px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: var(--fondo); border: 2px solid var(--linea); border-bottom-width: 4px; }
+.gym-check svg { width: 22px; height: 22px; fill: none; stroke: var(--linea); stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
+.gym-check.hecha { background: var(--exito); border-color: color-mix(in srgb, var(--exito) 70%, black); }
+.gym-check.hecha svg { stroke: #fff; }
+.gym-ejercicio .fila-botones { margin-top: 0; }
+.gym-ejercicio .fila-botones .boton-chico { padding: 9px 14px; }
+.gym-descanso {
+  position: fixed; left: 12px; right: 12px; bottom: calc(var(--abajo) + 14px); z-index: 3;
+  max-width: 496px; margin: 0 auto; padding: 10px 12px; border-radius: 18px;
+  display: flex; align-items: center; gap: 8px;
+  background: var(--texto); color: var(--fondo); font-size: 14px;
+}
+.gym-descanso b { flex: 1; font-size: 22px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.gym-descanso .boton-chico { padding: 8px 10px; background: transparent; color: var(--fondo); border-color: color-mix(in srgb, var(--fondo) 35%, transparent); }
+.gym-record {
+  position: fixed; left: 14px; right: 14px; top: calc(var(--arriba) + 70px); z-index: 4;
+  max-width: 492px; margin: 0 auto; padding: 14px 16px; border-radius: 18px; text-align: center;
+  background: var(--logro-fondo); border: 2px solid var(--logro-borde); border-bottom-width: 5px;
+  font-size: 16px; font-weight: 900; color: var(--fuego-sombra);
+  animation: brotar .35s cubic-bezier(.2, 1.4, .4, 1);
+}
+
+.marco-privacidad { width: 100%; height: 65vh; border: 0; border-radius: 14px; background: #fff; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }

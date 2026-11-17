@@ -7,7 +7,7 @@
   var Api = window.Api;
   var $ = R.$;
   var crear = R.crear;
-  var VERSION = '3.0';
+  var VERSION = '4.0';
   var medio = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
 
   // ---------- Tema claro / oscuro ----------
@@ -211,7 +211,44 @@
         R.guardarAjustes();
         R.vibrar(30);
       })));
+    general.appendChild(fila('Sonidos', 'Al cumplir hábitos, logros, récords y retos',
+      interruptor('Sonidos', R.ajustes.sonidos, function (on) {
+        R.ajustes.sonidos = on;
+        R.guardarAjustes();
+        R.sonar('hecho');
+      })));
+    general.appendChild(fila('Retos sorpresa', 'De vez en cuando te llega un reto pequeño que da puntos extra',
+      interruptor('Retos sorpresa', R.ajustes.retos, function (on) {
+        R.ajustes.retos = on;
+        R.guardarAjustes();
+        R.programarRecordatorios(on);
+        R.pintar();
+      })));
+    var meta = crear('button', 'boton-chico', R.estado().metaXP + ' pts');
+    meta.type = 'button';
+    meta.addEventListener('click', function () { R.abrirMeta(); });
+    general.appendChild(fila('Meta diaria', 'Puntos que quieres ganar cada día', meta));
     v.appendChild(general);
+
+    // Reloj (Health Connect)
+    var reloj = seccion('Reloj');
+    var Reloj = window.Reloj;
+    if (!Reloj || !Reloj.esApp()) {
+      reloj.appendChild(crear('p', 'nota', 'Conecta tu Redmi Watch desde la app instalada en tu Android (usa Health Connect).'));
+    } else if (R.ajustes.reloj) {
+      var d = Reloj.datos();
+      reloj.appendChild(fila('⌚ Conectado', d && d.fecha === R.claveHoy() ? R.miles(d.pasos) + ' pasos hoy' : 'Leyendo tus datos…'));
+      reloj.appendChild(boton('Actualizar ahora', 'boton-secundario', function () { Reloj.actualizar(true).then(pintarAjustes); }));
+      reloj.appendChild(boton('Abrir Health Connect', 'boton-secundario', Reloj.abrirHealthConnect));
+      reloj.appendChild(boton('Desconectar reloj', 'boton-peligro', function () { Reloj.desconectar(); pintarAjustes(); R.avisar('Reloj desconectado.'); }));
+    } else {
+      reloj.appendChild(crear('p', 'nota', 'Tus pasos, calorías y entrenamientos del reloj llegan solos, y los hábitos con meta de pasos se marcan solos.'));
+      reloj.appendChild(boton('Conectar reloj', 'boton-principal', function () {
+        Reloj.conectar().then(pintarAjustes, function (e) { R.avisar(e.message); });
+      }));
+    }
+    reloj.appendChild(crear('p', 'nota', 'Redmi Watch: en la app Mi Fitness busca la opción "Health Connect" (en tu perfil o ajustes) y actívala para que tus datos lleguen aquí.'));
+    v.appendChild(reloj);
 
     // Cuenta
     var cuenta = seccion('Cuenta');
@@ -239,6 +276,11 @@
         R.guardarAjustes();
         if (Cuenta.conectado()) Cuenta.respaldarAhora(false);
       })));
+    privacidad.appendChild(fila('Avisos de amigos', '"Gael te superó en la liga", "Ana subió de nivel"…',
+      interruptor('Avisos de amigos', R.ajustes.avisosAmigos, function (on) {
+        R.ajustes.avisosAmigos = on;
+        R.guardarAjustes();
+      })));
     v.appendChild(privacidad);
 
     // Datos
@@ -253,6 +295,15 @@
     // Acerca de
     var acerca = seccion('Acerca de');
     acerca.appendChild(fila('Racha', 'Versión ' + VERSION));
+    acerca.appendChild(boton('Política de privacidad', 'boton-secundario', function () {
+      R.abrirHojaGenerica(function (hoja) {
+        var marco = crear('iframe', 'marco-privacidad');
+        marco.src = 'privacypolicy.html';
+        marco.title = 'Política de privacidad';
+        hoja.appendChild(marco);
+        hoja.appendChild(boton('Cerrar', 'boton-plano', R.cerrarCapa));
+      });
+    }));
     v.appendChild(acerca);
   }
 
