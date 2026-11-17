@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
   racha INT UNSIGNED NOT NULL DEFAULT 0,
   logros INT UNSIGNED NOT NULL DEFAULT 0,
   minutos_semana INT UNSIGNED NOT NULL DEFAULT 0,
+  medallas INT UNSIGNED NOT NULL DEFAULT 0,
   creado INT UNSIGNED NOT NULL,
   UNIQUE KEY uk_correo (correo),
   UNIQUE KEY uk_codigo (codigo)
@@ -62,4 +63,29 @@ CREATE TABLE IF NOT EXISTS intentos (
   clave VARCHAR(200) NOT NULL,
   momento INT UNSIGNED NOT NULL,
   KEY k_clave_momento (clave, momento)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Novedades: lo que publica cada quien (hábito cumplido, reto, récord, nivel…). Las fotos viven en la carpeta fotos/.
+CREATE TABLE IF NOT EXISTS actividad (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  usuario_id INT UNSIGNED NOT NULL,
+  clave VARCHAR(80) NOT NULL,
+  tipo VARCHAR(20) NOT NULL,
+  titulo VARCHAR(120) NOT NULL DEFAULT '',
+  emoji VARCHAR(32) NOT NULL DEFAULT '',
+  detalle VARCHAR(160) NOT NULL DEFAULT '',
+  puntos INT UNSIGNED NOT NULL DEFAULT 0,
+  foto VARCHAR(40) NULL,
+  creado INT UNSIGNED NOT NULL,
+  KEY k_usuario_creado (usuario_id, creado),
+  UNIQUE KEY uk_usuario_clave (usuario_id, clave),
+  KEY k_creado (creado)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Liga semanal: puntos de cada quien por semana (semana = el lunes, "AAAA-MM-DD")
+CREATE TABLE IF NOT EXISTS puntos_semana (
+  usuario_id INT UNSIGNED NOT NULL,
+  semana CHAR(10) NOT NULL,
+  puntos INT UNSIGNED NOT NULL DEFAULT 0,
+  PRIMARY KEY (usuario_id, semana)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -3,7 +3,8 @@
    - Crear cuenta, iniciar sesión y recuperar la contraseña con un código por correo.
    - Respaldo automático de tus datos en tu cuenta.
    - Avisar "en línea" mientras usas la app y "me fui" al salir.
-   - La pestaña Amigos: tu código, agregar amigos y la clasificación.
+   - La sección Amigos (dentro de la pestaña Amigos): tu código, agregar amigos y la clasificación.
+     Novedades y Liga viven en social.js.
 */
 (function () {
   var R = window.Racha;
@@ -223,10 +224,12 @@
     return Api.llamar('sincronizar', {
       datos: estado,
       stats: R.resumen(),
+      semanas: R.semanasLiga(),
       nombre: estado.perfil.nombre,
       avatar: estado.perfil.avatar,
       mostrarEnLinea: R.ajustes.mostrarEnLinea
     }).then(function () {
+      document.dispatchEvent(new Event('racha:respaldado'));
       if (avisarResultado) R.avisar('Respaldo guardado ✓');
     }, function (e) {
       if (avisarResultado) R.avisar(e.message); // sin internet: se reintenta con el próximo cambio
@@ -255,7 +258,7 @@
   function alVolver() {
     if (!conectado()) return;
     iniciarLatido();
-    if (R.vista() === 'amigos') cargarAmigos();
+    if (enPanelAmigos()) cargarAmigos();
   }
   document.addEventListener('visibilitychange', function () { if (document.hidden) alSalir(); else alVolver(); });
   document.addEventListener('pause', alSalir);   // eventos de la app instalada
@@ -290,6 +293,8 @@
     Api.llamar('amigos').then(function (r) {
       listaAmigos = r.amigos;
       errorAmigos = '';
+      // social.js revisa si alguien te superó en puntos
+      document.dispatchEvent(new CustomEvent('racha:amigos', { detail: r.amigos }));
       var s = Api.sesion();
       if (s && s.amigos !== r.amigos.length) {
         s.amigos = r.amigos.length;   // alguien te agregó o te quitó: cambian tus puntos
@@ -304,6 +309,7 @@
       if (R.vista() === 'amigos') pintarAmigos();
     });
   }
+  function enPanelAmigos() { return R.vista() === 'amigos' && !$('panel-amigos').hidden; }
 
   // "hace 5 min", "hace 2 h", "ayer"…
   function haceCuanto(segundos) {
@@ -416,8 +422,8 @@
       hoja.appendChild(cabeza);
 
       var cifras = crear('div', 'cifras');
-      [['Nivel', a.nivel], ['Puntos', a.xp], ['Racha', '🔥 ' + a.racha], ['Logros', a.logros],
-        ['Min. esta semana', a.minutosSemana], ['Amigos desde', new Date(a.amigosDesde * 1000).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })]
+      [['Nivel', a.nivel], ['Puntos', R.miles(a.xp)], ['Racha', '🔥 ' + a.racha], ['Logros', a.logros],
+        ['Medallas', '🥇 ' + (a.medallas || 0)], ['Min. esta semana', a.minutosSemana]
       ].forEach(function (c) {
         var cifra = crear('div', 'cifra');
         cifra.appendChild(crear('strong', '', String(c[1])));
@@ -519,17 +525,17 @@
     copiar(mensaje).then(function () { R.avisar('Mensaje copiado. Pégalo en WhatsApp o donde quieras.'); });
   });
 
-  // Mientras ves la pestaña Amigos, la lista se actualiza cada 30 segundos
+  // Mientras ves la lista de amigos, se actualiza cada 30 segundos
   setInterval(function () {
-    if (R.vista() === 'amigos' && !document.hidden) cargarAmigos();
+    if (enPanelAmigos() && !document.hidden) cargarAmigos();
   }, 30000);
 
   // ======================================================================
-  //  ARRANQUE
+  //  ARRANQUE  (la pestaña Amigos la registra social.js)
   // ======================================================================
-  R.registrarVista('amigos', pintarAmigos, cargarAmigos);
-
   window.Cuenta = {
+    pintarAmigos: pintarAmigos,
+    cargarAmigos: cargarAmigos,
     abrir: abrir,
     conectado: conectado,
     servidorListo: servidorListo,

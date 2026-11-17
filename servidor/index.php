@@ -1,6 +1,7 @@
 <?php
 /*
-  index.php — El servidor de Racha (cuentas, amigos, "en línea" y respaldo).
+  index.php — El servidor de Racha (cuentas, amigos, "en línea", respaldo,
+  novedades con fotos y liga semanal).
 
   La app le habla así:   POST  https://tu-dominio/racha-api/?accion=entrar
   con un cuerpo JSON, y el servidor responde JSON:
@@ -10,6 +11,8 @@
   Si la petición necesita sesión, la app manda la cabecera  X-Racha-Token: <token>.
 
   Seguridad:
+   - Las fotos se guardan en la carpeta fotos/ (cerrada al público) y solo las ven
+     su dueño y sus amigos. Se borran solas a los 7 días.
    - Las contraseñas se guardan cifradas con password_hash (nunca en texto).
    - Los tokens de sesión se guardan solo como huella SHA-256.
    - Todas las consultas usan sentencias preparadas (evita inyección SQL).
@@ -34,6 +37,9 @@ const DURACION_SESION = 180 * 86400;   // 180 días
 const MAX_AMIGOS = 100;
 const EN_LINEA_SEGUNDOS = 150;         // si no avisa en 2.5 min, ya no está en línea
 const LETRAS_CODIGO = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sin 0/O ni 1/I para no confundir
+const VERSION_ESQUEMA = 2;             // súbelo cuando cambien las tablas
+const DIAS_FOTOS = 7;                  // las fotos se borran a los 7 días
+const TIPOS_PUBLICACION = ['habito', 'reto', 'record', 'entreno', 'nivel', 'medalla', 'racha'];
 
 // ---------- Respuestas ----------
 function responder(array $datos): void
@@ -82,18 +88,79 @@ function fila(string $sql, array $parametros = []): ?array
     return $f === false ? null : $f;
 }
 
+// ---------- Actualización automática de las tablas ----------
+// Cuando subes una versión nueva de este archivo, la primera petición agrega lo que falte
+// (tablas nuevas, columnas nuevas y la carpeta de fotos). No borra nada.
+function carpetaFotos(): string
+{
+    return __DIR__ . '/fotos';
+}
+
+function migrar(): void
+{
+    global $db;
+    $marca = carpetaFotos() . '/version.txt';
+    if (is_file($marca) && (int)trim((string)file_get_contents($marca)) >= VERSION_ESQUEMA) {
+        return;
+    }
+    $sqlite = $db->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite';
+    $fin = $sqlite ? '' : ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci';
+    $llave = $sqlite ? 'INTEGER PRIMARY KEY AUTOINCREMENT' : 'INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY';
+    $indices = $sqlite ? '' : ', KEY k_usuario_creado (usuario_id, creado), UNIQUE KEY uk_usuario_clave (usuario_id, clave), KEY k_creado (creado)';
+
+    $db->exec("CREATE TABLE IF NOT EXISTS actividad (
+        id $llave,
+        usuario_id INT UNSIGNED NOT NULL,
+        clave VARCHAR(80) NOT NULL,
+        tipo VARCHAR(20) NOT NULL,
+        titulo VARCHAR(120) NOT NULL DEFAULT '',
+        emoji VARCHAR(32) NOT NULL DEFAULT '',
+        detalle VARCHAR(160) NOT NULL DEFAULT '',
+        puntos INT UNSIGNED NOT NULL DEFAULT 0,
+        foto VARCHAR(40) NULL,
+        creado INT UNSIGNED NOT NULL$indices
+    )$fin");
+    if ($sqlite) {
+        $db->exec('CREATE INDEX IF NOT EXISTS k_actividad_usuario ON actividad (usuario_id, creado)');
+        $db->exec('CREATE UNIQUE INDEX IF NOT EXISTS uk_actividad_clave ON actividad (usuario_id, clave)');
+    }
+    $db->exec("CREATE TABLE IF NOT EXISTS puntos_semana (
+        usuario_id INT UNSIGNED NOT NULL,
+        semana CHAR(10) NOT NULL,
+        puntos INT UNSIGNED NOT NULL DEFAULT 0,
+        PRIMARY KEY (usuario_id, semana)
+    )$fin");
+    try {
+        $db->query('SELECT medallas FROM usuarios LIMIT 1');
+    } catch (Throwable $e) {
+        $db->exec('ALTER TABLE usuarios ADD COLUMN medallas INT UNSIGNED NOT NULL DEFAULT 0');
+    }
+
+    // Carpeta de fotos cerrada al público (solo se entregan con ?accion=foto)
+    $carpeta = carpetaFotos();
+    if (!is_dir($carpeta) && !@mkdir($carpeta, 0755, true) && !is_dir($carpeta)) {
+        throw new RuntimeException('No se pudo crear la carpeta de fotos');
+    }
+    @file_put_contents($carpeta . '/.htaccess', "Require all denied\n");
+    @file_put_contents($carpeta . '/index.html', '');
+    if (@file_put_contents($marca, (string)VERSION_ESQUEMA) === false) {
+        throw new RuntimeException('No se pudo escribir fotos/version.txt');
+    }
+}
+migrar();
+
 // GET sirve para revisar que el servidor y la base de datos funcionan
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
     $tablas = 0;
-    foreach (['usuarios', 'sesiones', 'amistades', 'respaldos', 'recuperaciones', 'intentos'] as $t) {
+    foreach (['usuarios', 'sesiones', 'amistades', 'respaldos', 'recuperaciones', 'intentos', 'actividad', 'puntos_semana'] as $t) {
         try { consulta("SELECT 1 FROM $t LIMIT 1"); $tablas++; } catch (Throwable $e) { /* falta la tabla */ }
     }
-    responder(['app' => 'Racha API', 'version' => 1, 'base' => 'conectada', 'tablas' => $tablas, 'tablasEsperadas' => 6]);
+    responder(['app' => 'Racha API', 'version' => VERSION_ESQUEMA, 'base' => 'conectada', 'tablas' => $tablas, 'tablasEsperadas' => 8]);
 }
 
 // ---------- Lectura de la petición ----------
 $cuerpo = file_get_contents('php://input') ?: '';
-if (strlen($cuerpo) > 1500000) {
+if (strlen($cuerpo) > 2500000) {
     falla('La petición es demasiado grande.', 413);
 }
 $entrada = json_decode($cuerpo, true);
@@ -218,6 +285,87 @@ function claveEntrada(): string
     return is_string($c) ? $c : '';
 }
 
+// Un día en texto "AAAA-MM-DD" válido, o '' si no lo es
+function fechaValida($valor): string
+{
+    if (!is_string($valor) || !preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $valor, $m)) return '';
+    return checkdate((int)$m[2], (int)$m[3], (int)$m[1]) ? $valor : '';
+}
+
+// ---------- Fotos ----------
+// Recibe la foto en base64 (JPG), la revisa, la vuelve a guardar sin datos ocultos
+// (como la ubicación) y regresa su nombre de archivo.
+function guardarFoto(string $base64): string
+{
+    $limpio = preg_replace('#^data:image/[a-z]+;base64,#i', '', $base64);
+    $datos = base64_decode((string)$limpio, true);
+    if ($datos === false || strlen($datos) < 500) falla('No se pudo leer la foto.');
+    if (strlen($datos) > 1600000) falla('La foto es demasiado grande.');
+    if (substr($datos, 0, 3) !== "\xFF\xD8\xFF") falla('La foto debe ser JPG.');
+    if (function_exists('imagecreatefromstring')) {
+        $img = @imagecreatefromstring($datos);
+        if (!$img) falla('No se pudo leer la foto.');
+        $ancho = imagesx($img);
+        $alto = imagesy($img);
+        $max = 1280;
+        if ($ancho > $max || $alto > $max) {
+            $escala = $max / max($ancho, $alto);
+            $nueva = imagecreatetruecolor((int)round($ancho * $escala), (int)round($alto * $escala));
+            imagecopyresampled($nueva, $img, 0, 0, 0, 0, imagesx($nueva), imagesy($nueva), $ancho, $alto);
+            imagedestroy($img);
+            $img = $nueva;
+        }
+        ob_start();
+        imagejpeg($img, null, 82);
+        $datos = (string)ob_get_clean();
+        imagedestroy($img);
+    }
+    $nombre = bin2hex(random_bytes(16));
+    if (@file_put_contents(carpetaFotos() . '/' . $nombre . '.jpg', $datos, LOCK_EX) === false) {
+        throw new RuntimeException('No se pudo guardar la foto');
+    }
+    return $nombre;
+}
+
+function borrarArchivoFoto(?string $nombre): void
+{
+    if ($nombre && preg_match('/^[a-f0-9]{32}$/', $nombre)) {
+        @unlink(carpetaFotos() . '/' . $nombre . '.jpg');
+    }
+}
+
+// Borra fotos de más de 7 días y publicaciones de más de 8
+function limpiarViejas(): void
+{
+    global $ahora;
+    $viejas = consulta('SELECT id, foto FROM actividad WHERE foto IS NOT NULL AND creado < ? LIMIT 300', [$ahora - DIAS_FOTOS * 86400])->fetchAll();
+    foreach ($viejas as $v) {
+        borrarArchivoFoto($v['foto']);
+        consulta('UPDATE actividad SET foto = NULL WHERE id = ?', [$v['id']]);
+    }
+    consulta('DELETE FROM actividad WHERE foto IS NULL AND creado < ?', [$ahora - (DIAS_FOTOS + 1) * 86400]);
+}
+
+function sonAmigos(int $a, int $b): bool
+{
+    return (bool)fila('SELECT usuario_id FROM amistades WHERE usuario_id = ? AND amigo_id = ?', [$a, $b]);
+}
+
+// Tabla de la liga de una semana: yo y mis amigos con sus puntos
+function tablaLiga(int $usuarioId, string $semana): array
+{
+    $filas = consulta('SELECT u.id, u.nombre, u.avatar, u.medallas, COALESCE(p.puntos, 0) AS puntos
+        FROM usuarios u LEFT JOIN puntos_semana p ON p.usuario_id = u.id AND p.semana = ?
+        WHERE u.id = ? OR u.id IN (SELECT amigo_id FROM amistades WHERE usuario_id = ?)
+        ORDER BY puntos DESC, u.nombre ASC', [$semana, $usuarioId, $usuarioId])->fetchAll();
+    return array_map(function ($f) use ($usuarioId) {
+        return [
+            'id' => (int)$f['id'], 'nombre' => $f['nombre'], 'avatar' => $f['avatar'],
+            'puntos' => (int)$f['puntos'], 'medallas' => (int)$f['medallas'], 'yo' => (int)$f['id'] === $usuarioId,
+        ];
+    }, $filas);
+}
+
 function enviarCorreo(string $para, string $asunto, string $mensaje): bool
 {
     global $config;
@@ -299,16 +447,39 @@ switch ($accion) {
             consulta('DELETE FROM respaldos WHERE usuario_id = ?', [$u['id']]);
             consulta('INSERT INTO respaldos (usuario_id, datos, actualizado) VALUES (?, ?, ?)', [$u['id'], $json, $ahora]);
         }
-        $s = is_array($entrada['stats'] ?? null) ? $entrada['stats'] : [];
         $nombre = texto('nombre', 24);
         $avatar = texto('avatar', 16);
         $mostrar = array_key_exists('mostrarEnLinea', $entrada) ? ($entrada['mostrarEnLinea'] ? 1 : 0) : (int)$u['mostrar_en_linea'];
-        consulta('UPDATE usuarios SET xp = ?, nivel = ?, racha = ?, logros = ?, minutos_semana = ?, nombre = ?, avatar = ?, mostrar_en_linea = ?, ultimo_visto = ? WHERE id = ?', [
-            entero($s['xp'] ?? 0), max(1, entero($s['nivel'] ?? 1, 100000)), entero($s['racha'] ?? 0, 100000),
-            entero($s['logros'] ?? 0, 1000), entero($s['minutosSemana'] ?? 0, 100000),
-            mb_strlen($nombre) >= 2 ? $nombre : $u['nombre'], $avatar !== '' ? $avatar : $u['avatar'],
-            $mostrar, $ahora, $u['id'],
+        consulta('UPDATE usuarios SET nombre = ?, avatar = ?, mostrar_en_linea = ?, ultimo_visto = ? WHERE id = ?', [
+            mb_strlen($nombre) >= 2 ? $nombre : $u['nombre'], $avatar !== '' ? $avatar : $u['avatar'], $mostrar, $ahora, $u['id'],
         ]);
+        // Estadísticas que ven tus amigos (solo si la app las manda)
+        if (is_array($entrada['stats'] ?? null)) {
+            $s = $entrada['stats'];
+            $nivelNuevo = max(1, entero($s['nivel'] ?? 1, 100000));
+            consulta('UPDATE usuarios SET xp = ?, nivel = ?, racha = ?, logros = ?, minutos_semana = ?, medallas = ? WHERE id = ?', [
+                entero($s['xp'] ?? 0), $nivelNuevo, entero($s['racha'] ?? 0, 100000),
+                entero($s['logros'] ?? 0, 1000), entero($s['minutosSemana'] ?? 0, 100000),
+                entero($s['medallas'] ?? $u['medallas'], 10000), $u['id'],
+            ]);
+            // Subiste de nivel: tus amigos lo ven en Novedades
+            $nivelViejo = (int)$u['nivel'];
+            if ((int)$u['xp'] > 0 && $nivelNuevo > $nivelViejo && $nivelNuevo - $nivelViejo <= 3
+                && !fila('SELECT id FROM actividad WHERE usuario_id = ? AND clave = ?', [$u['id'], 'nivel:' . $nivelNuevo])) {
+                consulta('INSERT INTO actividad (usuario_id, clave, tipo, titulo, emoji, detalle, puntos, foto, creado) VALUES (?, ?, ?, ?, ?, ?, 0, NULL, ?)',
+                    [$u['id'], 'nivel:' . $nivelNuevo, 'nivel', 'subió al nivel ' . $nivelNuevo, '⭐', '', $ahora]);
+            }
+        }
+        // Puntos de la liga semanal: { "2026-11-16": 120, "2026-11-09": 340 }
+        if (is_array($entrada['semanas'] ?? null)) {
+            $n = 0;
+            foreach ($entrada['semanas'] as $semana => $puntos) {
+                if (++$n > 3) break;
+                if (fechaValida((string)$semana) === '') continue;
+                consulta('DELETE FROM puntos_semana WHERE usuario_id = ? AND semana = ?', [$u['id'], $semana]);
+                consulta('INSERT INTO puntos_semana (usuario_id, semana, puntos) VALUES (?, ?, ?)', [$u['id'], $semana, entero($puntos, 1000000)]);
+            }
+        }
         responder(['actualizado' => $ahora]);
 
     // ---------- Traer mi respaldo ----------
@@ -328,7 +499,7 @@ switch ($accion) {
     case 'amigos':
         $u = usuarioActual();
         $yoMuestro = (int)$u['mostrar_en_linea'] === 1;
-        $filas = consulta('SELECT u.id, u.nombre, u.avatar, u.nivel, u.xp, u.racha, u.logros, u.minutos_semana, u.mostrar_en_linea, u.en_linea, u.ultimo_visto, a.creada
+        $filas = consulta('SELECT u.id, u.nombre, u.avatar, u.nivel, u.xp, u.racha, u.logros, u.minutos_semana, u.medallas, u.mostrar_en_linea, u.en_linea, u.ultimo_visto, a.creada
             FROM amistades a JOIN usuarios u ON u.id = a.amigo_id WHERE a.usuario_id = ? ORDER BY u.xp DESC', [$u['id']])->fetchAll();
         $amigos = array_map(function ($f) use ($yoMuestro, $ahora) {
             // Como en WhatsApp: si ocultas tu estado, tampoco ves el de los demás
@@ -337,7 +508,7 @@ switch ($accion) {
             return [
                 'id' => (int)$f['id'], 'nombre' => $f['nombre'], 'avatar' => $f['avatar'],
                 'nivel' => (int)$f['nivel'], 'xp' => (int)$f['xp'], 'racha' => (int)$f['racha'],
-                'logros' => (int)$f['logros'], 'minutosSemana' => (int)$f['minutos_semana'],
+                'logros' => (int)$f['logros'], 'minutosSemana' => (int)$f['minutos_semana'], 'medallas' => (int)$f['medallas'],
                 'enLinea' => $visible ? ((int)$f['en_linea'] === 1 && $hace < EN_LINEA_SEGUNDOS) : null,
                 'vistoHace' => $visible ? $hace : null,
                 'amigosDesde' => (int)$f['creada'],
@@ -392,7 +563,12 @@ switch ($accion) {
     case 'eliminarCuenta':
         $u = usuarioActual();
         if (!password_verify(claveEntrada(), $u['clave_hash'])) falla('La contraseña no es correcta.');
+        foreach (consulta('SELECT foto FROM actividad WHERE usuario_id = ? AND foto IS NOT NULL', [$u['id']])->fetchAll() as $f) {
+            borrarArchivoFoto($f['foto']);
+        }
         $db->beginTransaction();
+        consulta('DELETE FROM actividad WHERE usuario_id = ?', [$u['id']]);
+        consulta('DELETE FROM puntos_semana WHERE usuario_id = ?', [$u['id']]);
         consulta('DELETE FROM amistades WHERE usuario_id = ? OR amigo_id = ?', [$u['id'], $u['id']]);
         consulta('DELETE FROM sesiones WHERE usuario_id = ?', [$u['id']]);
         consulta('DELETE FROM respaldos WHERE usuario_id = ?', [$u['id']]);
@@ -400,6 +576,102 @@ switch ($accion) {
         consulta('DELETE FROM usuarios WHERE id = ?', [$u['id']]);
         $db->commit();
         responder([]);
+
+    // ---------- Publicar en Novedades (hábito cumplido, reto, récord…) ----------
+    // "clave" identifica la publicación: si ya existe, se actualiza (por ejemplo, al agregarle la foto).
+    case 'publicar':
+        $u = usuarioActual();
+        $clave = texto('clave', 80);
+        $tipo = texto('tipo', 20);
+        if (!preg_match('/^[A-Za-z0-9:_.\-]{1,80}$/', $clave)) falla('Publicación no válida.');
+        if (!in_array($tipo, TIPOS_PUBLICACION, true)) falla('Tipo de publicación no válido.');
+        if (demasiadosIntentos('publicar:' . $u['id'], 150, 3600)) falla('Vas muy rápido. Espera un rato.', 429);
+        anotarIntento('publicar:' . $u['id']);
+        $momento = entero($entrada['momento'] ?? $ahora, 4000000000);
+        if ($momento > $ahora + 300 || $momento < $ahora - 2 * 86400) $momento = $ahora;
+        $foto = null;
+        if (is_string($entrada['foto'] ?? null) && $entrada['foto'] !== '') {
+            if (demasiadosIntentos('foto:' . $u['id'], 40, 86400)) falla('Ya subiste muchas fotos hoy. Intenta mañana.', 429);
+            anotarIntento('foto:' . $u['id']);
+            $foto = guardarFoto($entrada['foto']);
+        }
+        $datosPub = [$tipo, texto('titulo', 120), texto('emoji', 32), texto('detalle', 160), entero($entrada['puntos'] ?? 0, 10000)];
+        $existe = fila('SELECT id, foto FROM actividad WHERE usuario_id = ? AND clave = ?', [$u['id'], $clave]);
+        if ($existe) {
+            if ($foto !== null) borrarArchivoFoto($existe['foto']);
+            $fotoFinal = $foto ?? $existe['foto'];
+            consulta('UPDATE actividad SET tipo = ?, titulo = ?, emoji = ?, detalle = ?, puntos = ?, foto = ? WHERE id = ?',
+                array_merge($datosPub, [$fotoFinal, $existe['id']]));
+            $id = (int)$existe['id'];
+        } else {
+            $fotoFinal = $foto;
+            consulta('INSERT INTO actividad (tipo, titulo, emoji, detalle, puntos, foto, usuario_id, clave, creado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                array_merge($datosPub, [$fotoFinal, $u['id'], $clave, $momento]));
+            $id = (int)$db->lastInsertId();
+        }
+        responder(['id' => $id, 'foto' => $fotoFinal !== null]);
+
+    // ---------- Borrar una publicación (por ejemplo, al desmarcar un hábito) ----------
+    case 'borrarPublicacion':
+        $u = usuarioActual();
+        $clave = texto('clave', 80);
+        $p = fila('SELECT id, foto FROM actividad WHERE usuario_id = ? AND clave = ?', [$u['id'], $clave]);
+        if ($p) {
+            borrarArchivoFoto($p['foto']);
+            consulta('DELETE FROM actividad WHERE id = ?', [$p['id']]);
+        }
+        responder(['borrada' => (bool)$p]);
+
+    // ---------- Novedades: lo que hicieron tú y tus amigos en los últimos 7 días ----------
+    case 'novedades':
+        $u = usuarioActual();
+        if (random_int(1, 5) === 1) limpiarViejas();
+        $filas = consulta('SELECT a.id, a.usuario_id, a.clave, a.tipo, a.titulo, a.emoji, a.detalle, a.puntos, a.foto, a.creado, u.nombre, u.avatar
+            FROM actividad a JOIN usuarios u ON u.id = a.usuario_id
+            WHERE a.creado > ? AND (a.usuario_id = ? OR a.usuario_id IN (SELECT amigo_id FROM amistades WHERE usuario_id = ?))
+            ORDER BY a.creado DESC, a.id DESC LIMIT 80', [$ahora - DIAS_FOTOS * 86400, $u['id'], $u['id']])->fetchAll();
+        $lista = array_map(function ($f) use ($u, $ahora) {
+            return [
+                'id' => (int)$f['id'],
+                'usuario' => ['id' => (int)$f['usuario_id'], 'nombre' => $f['nombre'], 'avatar' => $f['avatar']],
+                'yo' => (int)$f['usuario_id'] === (int)$u['id'],
+                'clave' => (int)$f['usuario_id'] === (int)$u['id'] ? $f['clave'] : null,
+                'tipo' => $f['tipo'], 'titulo' => $f['titulo'], 'emoji' => $f['emoji'], 'detalle' => $f['detalle'],
+                'puntos' => (int)$f['puntos'], 'foto' => $f['foto'] !== null,
+                'creado' => (int)$f['creado'], 'hace' => max(0, $ahora - (int)$f['creado']),
+            ];
+        }, $filas);
+        responder(['novedades' => $lista, 'ahora' => $ahora]);
+
+    // ---------- Ver una foto (solo su dueño y sus amigos) ----------
+    case 'foto':
+        $u = usuarioActual();
+        $id = entero($entrada['id'] ?? ($_GET['id'] ?? 0));
+        $p = fila('SELECT usuario_id, foto FROM actividad WHERE id = ?', [$id]);
+        if (!$p || !$p['foto']) falla('Esa foto ya no existe.', 404);
+        if ((int)$p['usuario_id'] !== (int)$u['id'] && !sonAmigos((int)$u['id'], (int)$p['usuario_id'])) {
+            falla('No puedes ver esta foto.', 403);
+        }
+        $ruta = carpetaFotos() . '/' . $p['foto'] . '.jpg';
+        if (!is_file($ruta)) falla('Esa foto ya no existe.', 404);
+        header('Content-Type: image/jpeg');
+        header('Cache-Control: private, max-age=604800');
+        header('Content-Length: ' . filesize($ruta));
+        readfile($ruta);
+        exit;
+
+    // ---------- Liga semanal (de lunes a domingo, entre tú y tus amigos) ----------
+    // La app manda qué lunes es la semana actual y la anterior (según la hora del teléfono).
+    case 'liga':
+        $u = usuarioActual();
+        $semana = fechaValida(texto('semana', 10));
+        $anterior = fechaValida(texto('anterior', 10));
+        if ($semana === '') falla('Semana no válida.');
+        responder([
+            'semana' => $semana,
+            'tabla' => tablaLiga((int)$u['id'], $semana),
+            'anterior' => $anterior === '' ? null : ['semana' => $anterior, 'tabla' => tablaLiga((int)$u['id'], $anterior)],
+        ]);
 
     // ---------- Olvidé mi contraseña: enviar código por correo ----------
     case 'pedirCodigo':

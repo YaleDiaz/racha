@@ -1,6 +1,6 @@
 {
   "name": "racha",
-  "version": "3.0.0",
+  "version": "4.0.0",
   "description": "App de rachas de hábitos para Android",
   "scripts": {
     "test": "node tests/logica.test.js",
@@ -8,10 +8,12 @@
   },
   "dependencies": {
     "@capacitor/android": "^8.6.2",
+    "@capacitor/camera": "^8.2.6",
     "@capacitor/cli": "^8.6.2",
     "@capacitor/core": "^8.6.2",
     "@capacitor/local-notifications": "^8.3.1",
-    "@capacitor/share": "^8.0.3"
+    "@capacitor/share": "^8.0.3",
+    "@capgo/capacitor-health": "^8.13.0"
   },
   "private": true
 }

@@ -1,12 +1,13 @@
+# Cada vez que subes cambios a GitHub, este archivo le dice a GitHub que compile el APK.
 name: Compilar APK
 
 on:
   push:
     branches: [main]
-  workflow_dispatch:
+  workflow_dispatch:   # también puedes lanzarlo a mano desde la pestaña "Actions"
 
 permissions:
-  contents: write
+  contents: write      # para poder publicar el APK en "Releases"
 
 jobs:
   apk:
@@ -36,10 +37,13 @@ jobs:
       - name: Crear el proyecto Android
         run: npx cap add android
 
-      - name: Poner icono y pantalla de inicio
+      - name: Poner icono, pantalla de inicio y sonidos
         run: cp -r recursos/android/res/. android/app/src/main/res/
 
-      - name: Usar siempre la misma firma
+      - name: Preparar Android (Health Connect necesita Android 8 o más)
+        run: node recursos/preparar-android.js
+
+      - name: Usar siempre la misma firma (para poder actualizar sin perder datos)
         run: |
           mkdir -p ~/.android
           cp recursos/debug.keystore ~/.android/debug.keystore
@@ -58,3 +62,13 @@ jobs:
         with:
           name: racha-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Publicar el APK en Releases
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk racha.apk
+          gh release create "v${{ github.run_number }}" racha.apk \
+            --title "Racha 4.0 · compilación ${{ github.run_number }}" \
+            --notes "APK generado automáticamente. Descarga racha.apk e instálalo en tu Android."

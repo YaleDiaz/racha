@@ -84,7 +84,7 @@ assert.deepStrictEqual(L.nivel(275), { nivel: 3, avance: 75, meta: 100 });
 
 // Logros
 let ls = L.logros([], [], d('2026-11-16'));
-assert.strictEqual(ls.length, 18);
+assert.strictEqual(ls.length, 26);
 assert.ok(ls.every((l) => !l.logrado && l.valor === 0));
 
 ls = L.logros([p1, p2], [e('gym', 200), e('correr', 60), e('futbol', 40)], d('2026-11-16'));
@@ -102,5 +102,78 @@ assert.ok(!logro(ls, 'amigo1').logrado);
 ls = L.logros([], [], d('2026-11-16'), 2);
 assert.ok(logro(ls, 'amigo1').logrado);
 assert.strictEqual(logro(ls, 'amigo5').valor, 2);
+
+
+// ---------- Escudos (días congelados) ----------
+// Racha del 10 al 14, el 15 no hizo nada, el 16 sí: sin escudo la racha es 1, con escudo 6
+const f1 = habito('2026-11-01', TODOS, ['2026-11-10', '2026-11-11', '2026-11-12', '2026-11-13', '2026-11-14', '2026-11-16']);
+assert.strictEqual(L.rachaHabito(f1, d('2026-11-16')), 1);
+assert.strictEqual(L.rachaHabito(f1, d('2026-11-16'), { '2026-11-15': true }), 6);
+assert.strictEqual(L.rachaGeneral([f1], d('2026-11-16')), 1);
+assert.strictEqual(L.rachaGeneral([f1], d('2026-11-16'), { '2026-11-15': true }), 6);
+assert.strictEqual(L.mejorRacha(f1, d('2026-11-16'), { '2026-11-15': true }), 6);
+// Hoy pendiente y ayer congelado: la racha sigue viva
+assert.strictEqual(L.rachaGeneral([habito('2026-11-01', TODOS, ['2026-11-14'])], d('2026-11-16'), { '2026-11-15': true }), 1);
+// ¿Necesita escudo? Solo si ese día no hiciste nada y venías con racha
+assert.strictEqual(L.necesitaEscudo([f1], d('2026-11-15')), true);
+assert.strictEqual(L.necesitaEscudo([f1], d('2026-11-14')), false);           // ese día sí hizo algo
+assert.strictEqual(L.necesitaEscudo([f1], d('2026-11-09')), false);           // no venía con racha
+assert.strictEqual(L.necesitaEscudo([f1], d('2026-11-17'), { '2026-11-15': true }), true);
+
+// ---------- Puntos por fechas ----------
+const conFoto = habito('2026-11-01', TODOS, ['2026-11-16', '2026-11-17']);
+conFoto.fotos = { '2026-11-16': true, '2026-11-10': true }; // la del 10 no cuenta: ese día no está marcado
+assert.strictEqual(L.totalFotos([conFoto]), 1);
+const est = {
+  habitos: [conFoto],
+  entrenos: [{ id: 'e1', deporte: 'gym', minutos: 50, fecha: '2026-11-16' }],
+  retos: [{ id: 'lagartijas20', fecha: '2026-11-17', puntos: 200 }],
+  sesiones: []
+};
+assert.strictEqual(L.puntosDe(est, '2026-11-16', '2026-11-16'), 10 + 10 + 25);
+assert.strictEqual(L.puntosDe(est, '2026-11-17', '2026-11-17'), 10 + 200);
+assert.strictEqual(L.puntosDe(est), 10 + 10 + 25 + 10 + 200);
+assert.strictEqual(L.xpTotal(est, 2), 255 + 50);
+assert.strictEqual(L.clave(L.lunes(d('2026-11-22'))), '2026-11-16'); // domingo → su lunes
+assert.strictEqual(L.clave(L.lunes(d('2026-11-16'))), '2026-11-16');
+
+// ---------- Récords del gym ----------
+const ses = (id, fecha, ejercicios) => ({ id, fecha, inicio: 0, minutos: 50, nombre: 'Pecho', ejercicios });
+const s1 = ses('s1', '2026-11-10', [{ nombre: 'Press banca', series: [{ peso: 50, reps: 10 }, { peso: 55, reps: 6 }] }]);
+const s2 = ses('s2', '2026-11-12', [{ nombre: 'press  BANCA', series: [{ peso: 55, reps: 8 }] }, { nombre: 'Dominadas', series: [{ peso: 0, reps: 8 }] }]);
+const s3 = ses('s3', '2026-11-14', [{ nombre: 'Press banca', series: [{ peso: 52, reps: 12 }] }, { nombre: 'Dominadas', series: [{ peso: 0, reps: 10 }] }]);
+const rs = L.records([s3, s1, s2]); // el orden de entrada no importa
+assert.strictEqual(rs.length, 2);
+assert.deepStrictEqual(rs.map((r) => [r.ejercicio, r.peso, r.reps, r.fecha]), [['press banca', 55, 8, '2026-11-12'], ['dominadas', 0, 10, '2026-11-14']]);
+assert.deepStrictEqual(L.mejoresMarcas([s1, s2, s3])['press banca'].peso, 55);
+assert.strictEqual(L.mejoresMarcas([s1, s2, s3])['press banca'].reps, 8);
+assert.strictEqual(L.historialEjercicio([s1, s2, s3], 'Press Banca').length, 3);
+assert.strictEqual(L.historialEjercicio([s1, s2, s3], 'press banca')[0].fecha, '2026-11-14'); // el más nuevo primero
+assert.strictEqual(L.puntosDe({ habitos: [], entrenos: [], sesiones: [s1, s2, s3] }), 2 * 20);
+assert.ok(L.superaMarca({ peso: 60, reps: 1 }, { peso: 55, reps: 12 }));
+assert.ok(!L.superaMarca({ peso: 55, reps: 8 }, { peso: 55, reps: 8 }));
+
+// ---------- Retos sorpresa ----------
+let dias = 0, conReto = 0;
+for (let i = 0; i < 70; i++) {
+  const r = L.retoDelDia(L.sumarDias(d('2026-11-16'), i));
+  dias++;
+  if (!r) continue;
+  conReto++;
+  assert.match(r.hora, /^(1\d):(00|15|30|45)$/);
+  assert.ok(r.puntos >= 100 && r.puntos <= 200);
+  assert.ok(L.RETOS.some((x) => x.id === r.id));
+}
+assert.ok(conReto > 25 && conReto < 55, 'unos 4 de cada 7 días tienen reto: ' + conReto);
+assert.deepStrictEqual(L.retoDelDia(d('2026-11-20')), L.retoDelDia(d('2026-11-20'))); // siempre el mismo
+assert.strictEqual(new Set(L.RETOS.map((r) => r.id)).size, L.RETOS.length);
+
+// Logros nuevos
+ls = L.logros([conFoto], [], d('2026-11-17'), 0, { retos: 1, records: 2, medallas: 1 });
+assert.ok(logro(ls, 'foto1').logrado);
+assert.ok(logro(ls, 'reto1').logrado);
+assert.ok(logro(ls, 'record1').logrado && !logro(ls, 'record10').logrado);
+assert.ok(logro(ls, 'liga1').logrado);
+assert.strictEqual(new Set(ls.map((l) => l.id)).size, ls.length); // ids sin repetir
 
 console.log('✔ Todas las pruebas de rachas pasaron');

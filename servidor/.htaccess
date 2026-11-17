@@ -1,0 +1,7 @@
+# Nadie puede descargar la configuración ni el esquema desde el navegador
+<FilesMatch "^(config\.php|config\.ejemplo\.php|esquema\.sql)$">
+  Require all denied
+</FilesMatch>
+
+# No mostrar la lista de archivos de la carpeta
+Options -Indexes

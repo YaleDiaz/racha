@@ -1,3 +1,6 @@
 node_modules/
-android/
+/android/
 *.apk
+
+# Configuración del servidor con contraseñas: NUNCA a GitHub
+servidor/config.php
