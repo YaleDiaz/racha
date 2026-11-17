@@ -28,6 +28,12 @@
   }
 
   // ---------- Piezas de la pantalla ----------
+  // ¿Estamos dentro de la app instalada de Android? (en iPhone y navegador es la versión web)
+  function esApp() {
+    var cap = window.Capacitor;
+    return !!(cap && cap.isNativePlatform && cap.isNativePlatform());
+  }
+
   function seccion(titulo) {
     var s = crear('section', 'tarjeta seccion-ajustes');
     s.appendChild(crear('h3', '', titulo));
@@ -198,19 +204,25 @@
 
     // General
     var general = seccion('General');
-    general.appendChild(fila('Recordatorios', 'Avisos a la hora que elegiste en cada hábito',
-      interruptor('Recordatorios', R.ajustes.recordatorios, function (on) {
-        R.ajustes.recordatorios = on;
-        R.guardarAjustes();
-        R.programarRecordatorios(on);
-        R.avisar(on ? 'Recordatorios activados.' : 'Recordatorios apagados.');
-      })));
-    general.appendChild(fila('Vibración', 'Al marcar hábitos y desbloquear logros',
-      interruptor('Vibración', R.ajustes.vibracion, function (on) {
-        R.ajustes.vibracion = on;
-        R.guardarAjustes();
-        R.vibrar(30);
-      })));
+    if (esApp()) {
+      general.appendChild(fila('Recordatorios', 'Avisos a la hora que elegiste en cada hábito',
+        interruptor('Recordatorios', R.ajustes.recordatorios, function (on) {
+          R.ajustes.recordatorios = on;
+          R.guardarAjustes();
+          R.programarRecordatorios(on);
+          R.avisar(on ? 'Recordatorios activados.' : 'Recordatorios apagados.');
+        })));
+    } else {
+      general.appendChild(fila('Recordatorios', 'Solo en la app de Android. En iPhone y en el navegador no llegan avisos.', null));
+    }
+    if (esApp() || navigator.vibrate) {
+      general.appendChild(fila('Vibración', 'Al marcar hábitos y desbloquear logros',
+        interruptor('Vibración', R.ajustes.vibracion, function (on) {
+          R.ajustes.vibracion = on;
+          R.guardarAjustes();
+          R.vibrar(30);
+        })));
+    }
     general.appendChild(fila('Sonidos', 'Al cumplir hábitos, logros, récords y retos',
       interruptor('Sonidos', R.ajustes.sonidos, function (on) {
         R.ajustes.sonidos = on;
@@ -233,7 +245,9 @@
     // Reloj (Health Connect)
     var reloj = seccion('Reloj');
     var Reloj = window.Reloj;
-    if (!Reloj || !Reloj.esApp()) {
+    if (!esApp()) {
+      reloj.appendChild(crear('p', 'nota', 'Conectar un reloj solo funciona en la app de Android (con Health Connect).'));
+    } else if (!Reloj || !Reloj.esApp()) {
       reloj.appendChild(crear('p', 'nota', 'Conecta tu Redmi Watch desde la app instalada en tu Android (usa Health Connect).'));
     } else if (R.ajustes.reloj) {
       var d = Reloj.datos();
@@ -247,7 +261,7 @@
         Reloj.conectar().then(pintarAjustes, function (e) { R.avisar(e.message); });
       }));
     }
-    reloj.appendChild(crear('p', 'nota', 'Redmi Watch: en la app Mi Fitness busca la opción "Health Connect" (en tu perfil o ajustes) y actívala para que tus datos lleguen aquí.'));
+    if (esApp()) reloj.appendChild(crear('p', 'nota', 'Redmi Watch: en la app Mi Fitness busca la opción "Health Connect" (en tu perfil o ajustes) y actívala para que tus datos lleguen aquí.'));
     v.appendChild(reloj);
 
     // Cuenta
