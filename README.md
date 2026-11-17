@@ -24,6 +24,18 @@ App de rachas de hábitos para Android, con estilo tipo Duolingo.
 2. En la pestaña **Actions** espera a que "Compilar APK" termine en verde (unos 5 minutos).
 3. Descarga el APK desde **Releases** o desde **Artifacts** dentro de la compilación, e instálalo encima del anterior.
 
+## Versión para iPhone (web)
+
+La misma app funciona en Safari: **https://yalediaz.summaclothes.com/racha/**
+
+1. Abrir el link en **Safari** del iPhone.
+2. Compartir → **Agregar a inicio** → Agregar.
+3. Abrir Racha desde el ícono nuevo y crear la cuenta ahí.
+
+Cómo se actualiza: cada vez que cambia algo en `www/`, GitHub copia esa carpeta a la rama `web`
+(`.github/workflows/publicar-web.yml`) y Hostinger la descarga en la carpeta `racha`.
+En iPhone no hay recordatorios ni reloj (solo en Android); la cámara, amigos, liga, gym y fotos sí funcionan.
+
 ## El servidor de cuentas (PHP + MySQL en Hostinger)
 
 La carpeta `servidor/` es el "backend": guarda cuentas, amigos, el estado en línea y los respaldos.

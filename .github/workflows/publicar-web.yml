@@ -1,0 +1,26 @@
+# Versión web (para iPhone): copia la carpeta www a la rama "web".
+# Hostinger descarga esa rama en yalediaz.summaclothes.com/racha
+name: Publicar versión web
+
+on:
+  push:
+    branches: [main]
+    paths: ['www/**']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Pasar la carpeta www a la rama web
+        run: |
+          git subtree split --prefix www -b web
+          git push origin web

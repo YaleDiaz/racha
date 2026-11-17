@@ -1,0 +1,7 @@
+# Versión web de Racha (para iPhone). Que el teléfono siempre pregunte si hay versión nueva.
+AddType application/manifest+json .webmanifest
+<IfModule mod_headers.c>
+  <FilesMatch "\.(html|js|css|webmanifest)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>
